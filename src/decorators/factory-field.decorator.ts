@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { FACTORY_FIELD } from "@constants/metadata-keys.constants";
-import type { Faker } from "@interfaces/faker";
+import type { Faker } from "@faker-js/faker";
 import { extendArrayMetadata } from "@utils/extend-array-metadata";
 
 type FactoryFieldValueFn = (faker: Faker) => any;
