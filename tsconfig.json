@@ -1,0 +1,31 @@
+{
+	"compilerOptions": {
+		"module": "ES6",
+		"declaration": true,
+		"removeComments": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"target": "ES6",
+		"sourceMap": true,
+		"outDir": "./dist",
+		"baseUrl": "./",
+		"incremental": true,
+		"skipLibCheck": true,
+		"strictNullChecks": false,
+		"noImplicitAny": false,
+		"strictBindCallApply": false,
+		"forceConsistentCasingInFileNames": false,
+		"noFallthroughCasesInSwitch": false,
+		"types": ["node", "vitest/globals"],
+		"paths": {
+			"@decorators/*": ["src/decorators/*"],
+			"@constants/*": ["src/constants/*"],
+			"@interfaces/*": ["src/interfaces/*"],
+			"@utils/*": ["src/utils/*"],
+			"@lib/*": ["src/lib/*"]
+		}
+	},
+	"exclude": ["**.*.spec.ts", "node_modules"],
+	"include": ["src"]
+}
