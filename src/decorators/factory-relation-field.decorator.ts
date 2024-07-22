@@ -1,6 +1,6 @@
 import { FACTORY_RELATION } from "@constants/metadata-keys.constants";
 import type { Type } from "@interfaces/type";
-import { extendArrayMetadata } from "src/utils";
+import { extendArrayMetadata } from "@utils/extend-array-metadata";
 
 export interface FactoryRelationMetadata {
 	property: string;

@@ -17,7 +17,8 @@
 		"strictBindCallApply": false,
 		"forceConsistentCasingInFileNames": false,
 		"noFallthroughCasesInSwitch": false,
-		"types": ["node", "vitest/globals"],
+		"types": ["node", "vitest/globals", "reflect-metadata"],
+		"moduleResolution": "node",
 		"paths": {
 			"@decorators/*": ["src/decorators/*"],
 			"@constants/*": ["src/constants/*"],
