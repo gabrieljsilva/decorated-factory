@@ -18,14 +18,7 @@
 		"forceConsistentCasingInFileNames": false,
 		"noFallthroughCasesInSwitch": false,
 		"types": ["node", "vitest/globals", "reflect-metadata"],
-		"moduleResolution": "node",
-		"paths": {
-			"@decorators/*": ["src/decorators/*"],
-			"@constants/*": ["src/constants/*"],
-			"@interfaces/*": ["src/interfaces/*"],
-			"@utils/*": ["src/utils/*"],
-			"@lib/*": ["src/lib/*"]
-		}
+		"moduleResolution": "node"
 	},
 	"exclude": ["**.*.spec.ts", "node_modules"],
 	"include": ["src"]

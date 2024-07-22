@@ -1,13 +1,10 @@
 import "reflect-metadata";
-import {
-	FACTORY_FIELD,
-	FACTORY_RELATION,
-} from "@constants/metadata-keys.constants";
-import { FactoryField } from "@decorators/factory-field.decorator";
+import { FACTORY_FIELD, FACTORY_RELATION } from "../constants";
+import { FactoryField } from "./factory-field.decorator";
 import {
 	FactoryRelationField,
 	type FactoryRelationMetadata,
-} from "@decorators/factory-relation-field.decorator";
+} from "./factory-relation-field.decorator";
 
 describe("FactoryRelationField tests", () => {
 	it("should add relation metadata to field", () => {

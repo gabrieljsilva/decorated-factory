@@ -1,6 +1,6 @@
 import "reflect-metadata";
-import { FACTORY_FIELD } from "@constants/metadata-keys.constants";
-import { FactoryField } from "@decorators/factory-field.decorator";
+import { FACTORY_FIELD } from "../constants";
+import { FactoryField } from "./factory-field.decorator";
 
 describe("FactoryField tests", () => {
 	it("should add metadata field", () => {

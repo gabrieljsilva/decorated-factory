@@ -1,7 +1,6 @@
 import type { Faker } from "@faker-js/faker";
-import type { Select } from "@interfaces/select";
-import type { Type } from "@interfaces/type";
-import { Overridable } from "@lib/overridable";
+import type { Select, Type } from "../interfaces";
+import { Overridable } from "./overridable";
 export declare class Factory {
     private readonly faker;
     constructor(fakerInstance: Faker);
