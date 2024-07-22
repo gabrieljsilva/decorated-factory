@@ -1,4 +1,4 @@
-import type { Type } from "@interfaces/type";
+import type { Type } from "../interfaces";
 export interface FactoryRelationMetadata {
     property: string;
     returnTypeFn: () => Type | [Type];

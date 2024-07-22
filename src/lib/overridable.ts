@@ -1,4 +1,4 @@
-import type { DeepPartial } from "@interfaces/deep-partial";
+import type { DeepPartial } from "../interfaces";
 
 export class Overridable<T> {
 	private readonly instance: T;

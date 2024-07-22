@@ -1,13 +1,11 @@
-import {
-	FACTORY_FIELD,
-	FACTORY_RELATION,
-} from "@constants/metadata-keys.constants";
-import type { FactoryFieldMetadata } from "@decorators/factory-field.decorator";
-import type { FactoryRelationMetadata } from "@decorators/factory-relation-field.decorator";
 import type { Faker } from "@faker-js/faker";
-import type { Select } from "@interfaces/select";
-import type { Type } from "@interfaces/type";
-import { Overridable } from "@lib/overridable";
+import { FACTORY_FIELD, FACTORY_RELATION } from "../constants";
+import type {
+	FactoryFieldMetadata,
+	FactoryRelationMetadata,
+} from "../decorators";
+import type { Select, Type } from "../interfaces";
+import { Overridable } from "./overridable";
 
 export class Factory {
 	private readonly faker: Faker;

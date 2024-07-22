@@ -1,9 +1,8 @@
 import "reflect-metadata";
-import { FactoryField } from "@decorators/factory-field.decorator";
-import { FactoryRelationField } from "@decorators/factory-relation-field.decorator";
 import { faker } from "@faker-js/faker";
-import { Factory } from "src/lib/factory";
-import { Overridable } from "src/lib/overridable";
+import { FactoryField, FactoryRelationField } from "../decorators";
+import { Factory } from "./factory";
+import { Overridable } from "./overridable";
 
 describe("Factory tests", () => {
 	it("should create an entity", () => {
