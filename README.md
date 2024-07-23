@@ -23,6 +23,12 @@ yarn add reflect-metadata
 ## Usage
 
 ### Basic Usage
+Ensure import reflect-metadata at the entry point of your application.
+
+```typescript
+import 'reflect-metadata';
+// rest of your code...
+```
 
 To use the Factory utility, you first need to define a class and use the `@FactoryField` decorator to specify how to generate data for each field. The decorator takes a function that receives a `faker` instance and returns the generated data.
 
