@@ -33,9 +33,7 @@ describe("Factory tests", () => {
 		}
 
 		const factory = new Factory(faker);
-		const dummyEntity = factory
-			.create(DummyEntity)
-			.override(() => ({ name: "Hello World" }));
+		const dummyEntity = factory.create(DummyEntity).override(() => ({ name: "Hello World" }));
 
 		expect(dummyEntity).toBeInstanceOf(DummyEntity);
 		expect(dummyEntity.name).toBe("Hello World");
