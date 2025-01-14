@@ -3,6 +3,15 @@
 	"organizeImports": {
 		"enabled": true
 	},
+	"javascript": {
+		"formatter": {
+			"lineWidth": 120,
+			"indentWidth": 1
+		},
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -11,7 +20,11 @@
 				"noExplicitAny": "off"
 			},
 			"complexity": {
-				"noBannedTypes": "off"
+				"noBannedTypes": "off",
+				"noStaticOnlyClass": "off"
+			},
+			"style": {
+				"useImportType": "off"
 			}
 		}
 	}
