@@ -25,10 +25,6 @@ export function FactoryRelationField<Parent, Child>(
 			keyBinding,
 		};
 
-		extendArrayMetadata(
-			FACTORY_RELATION,
-			[factoryRelationMetadata],
-			target.constructor,
-		);
+		extendArrayMetadata(FACTORY_RELATION, [factoryRelationMetadata], target.constructor);
 	};
 }
