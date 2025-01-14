@@ -1,10 +1,7 @@
 import type { Faker } from "@faker-js/faker";
 import { resolvePath } from "src/utils";
 import { FACTORY_FIELD, FACTORY_RELATION } from "../constants";
-import type {
-	FactoryFieldMetadata,
-	FactoryRelationMetadata,
-} from "../decorators";
+import type { FactoryFieldMetadata, FactoryRelationMetadata } from "../decorators";
 import type { Select, Type } from "../interfaces";
 import { Overridable } from "./overridable";
 
@@ -30,21 +27,12 @@ export class Factory {
 		return instance;
 	}
 
-	newList<T = any>(
-		entity: Type<T>,
-		amount: number,
-		select?: Select<T>,
-	): Array<T> {
+	newList<T = any>(entity: Type<T>, amount: number, select?: Select<T>): Array<T> {
 		return new Array(amount).fill(null).map(() => this.new(entity, select));
 	}
 
-	private applyRelations<T = any>(
-		entity: Type<T>,
-		instance: T,
-		select?: Select<T>,
-	) {
-		const relationFieldMetadata: Array<FactoryRelationMetadata> =
-			Reflect.getMetadata(FACTORY_RELATION, entity) || [];
+	private applyRelations<T = any>(entity: Type<T>, instance: T, select?: Select<T>) {
+		const relationFieldMetadata: Array<FactoryRelationMetadata> = Reflect.getMetadata(FACTORY_RELATION, entity) || [];
 
 		for (const meta of relationFieldMetadata) {
 			const selectedField = select?.[meta.property as keyof T];
@@ -55,22 +43,17 @@ export class Factory {
 				const relationType = isRelationArray ? returnType[0] : returnType;
 
 				if (isRelationArray) {
-					const [instancesToCreate, relationSelect] = selectedField as [
-						number,
-						Select<unknown>,
-					];
-					instance[meta.property] = new Array(instancesToCreate)
-						.fill(null)
-						.map(() => {
-							const relationInstance = this.new(relationType, relationSelect);
-							if (meta.keyBinding) {
-								const parentValue = resolvePath(instance, meta.keyBinding.key);
-								if (parentValue !== undefined) {
-									relationInstance[meta.keyBinding.inverseField] = parentValue;
-								}
+					const [instancesToCreate, relationSelect] = selectedField as [number, Select<unknown>];
+					instance[meta.property] = new Array(instancesToCreate).fill(null).map(() => {
+						const relationInstance = this.new(relationType, relationSelect);
+						if (meta.keyBinding) {
+							const parentValue = resolvePath(instance, meta.keyBinding.key);
+							if (parentValue !== undefined) {
+								relationInstance[meta.keyBinding.inverseField] = parentValue;
 							}
-							return relationInstance;
-						});
+						}
+						return relationInstance;
+					});
 					continue;
 				}
 
@@ -88,8 +71,7 @@ export class Factory {
 
 	private createInstance<T = any>(entity: Type<T>, select?: Select<T>) {
 		const instance = new entity();
-		const fieldMetadata: Array<FactoryFieldMetadata> =
-			Reflect.getMetadata(FACTORY_FIELD, entity) || [];
+		const fieldMetadata: Array<FactoryFieldMetadata> = Reflect.getMetadata(FACTORY_FIELD, entity) || [];
 
 		for (const meta of fieldMetadata) {
 			const fieldSelect = select?.[meta.property as keyof T];
