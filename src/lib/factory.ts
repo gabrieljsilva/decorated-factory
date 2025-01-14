@@ -1,4 +1,5 @@
 import type { Faker } from "@faker-js/faker";
+import { resolvePath } from "src/utils";
 import { FACTORY_FIELD, FACTORY_RELATION } from "../constants";
 import type {
 	FactoryFieldMetadata,
@@ -60,14 +61,27 @@ export class Factory {
 					];
 					instance[meta.property] = new Array(instancesToCreate)
 						.fill(null)
-						.map(() => this.new(relationType, relationSelect));
+						.map(() => {
+							const relationInstance = this.new(relationType, relationSelect);
+							if (meta.keyBinding) {
+								const parentValue = resolvePath(instance, meta.keyBinding.key);
+								if (parentValue !== undefined) {
+									relationInstance[meta.keyBinding.inverseField] = parentValue;
+								}
+							}
+							return relationInstance;
+						});
 					continue;
 				}
 
-				instance[meta.property] = this.new<unknown>(
-					relationType,
-					selectedField,
-				);
+				const relationInstance = this.new<unknown>(relationType, selectedField);
+				if (meta.keyBinding) {
+					const parentValue = resolvePath(instance, meta.keyBinding.key);
+					if (parentValue !== undefined) {
+						relationInstance[meta.keyBinding.inverseField] = parentValue;
+					}
+				}
+				instance[meta.property] = relationInstance;
 			}
 		}
 	}
