@@ -234,4 +234,278 @@ describe("Factory tests", () => {
 		expect(dummyEntity).toBeInstanceOf(DummyEntity);
 		expect(dummyEntity.name).toBeNull();
 	});
+
+	it("should correctly bind ids in basic nested relations", () => {
+		class Comment {
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			title: string;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+		}
+
+		class Category {
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.word())
+			name: string;
+		}
+
+		class CategoryPost {
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			id: number;
+
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			postId: number;
+
+			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
+			categoryId: number;
+
+			@FactoryRelationField(() => Category, { key: "categoryId", inverseKey: "id" })
+			category: Category;
+
+			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
+			post: Post;
+		}
+
+		const factory = new Factory(faker);
+
+		const categoryPosts = factory.newList(CategoryPost, 3, {
+			category: true,
+			post: {
+				comments: [3],
+			},
+		});
+
+		expect(categoryPosts).toHaveLength(3);
+
+		for (const categoryPost of categoryPosts) {
+			expect(categoryPost.category.id).toBe(categoryPost.categoryId);
+			expect(categoryPost.post.id).toBe(categoryPost.postId);
+
+			for (const comment of categoryPost.post.comments) {
+				expect(comment.postId).toBe(categoryPost.post.id);
+			}
+		}
+	});
+
+	it("should maintain consistency when overriding nested fields", () => {
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			title: string;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+		}
+
+		class CategoryPost {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+
+			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
+			post: Post;
+		}
+
+		const factory = new Factory(faker);
+
+		const categoryPost = factory
+			.create(CategoryPost, {
+				post: {
+					comments: [2],
+				},
+			})
+			.override(() => ({
+				post: {
+					title: "Custom Post Title",
+					comments: [{ text: "Custom Comment" }],
+				},
+			}));
+
+		expect(categoryPost.post.title).toBe("Custom Post Title");
+		expect(categoryPost.post.id).toBe(categoryPost.postId);
+		expect(categoryPost.post.comments[0].text).toBe("Custom Comment");
+		expect(categoryPost.post.comments[0].postId).toBe(categoryPost.post.id);
+	});
+
+	it("should handle deeply nested relations", () => {
+		class Tag {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.number.int())
+			commentId: number;
+
+			@FactoryField((faker) => faker.lorem.word())
+			name: string;
+		}
+
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+
+			@FactoryRelationField(() => [Tag], { key: "id", inverseKey: "commentId" })
+			tags: Tag[];
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			title: string;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+		}
+
+		class CategoryPost {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+
+			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
+			post: Post;
+		}
+
+		const factory = new Factory(faker);
+
+		const instance = factory.new(CategoryPost, {
+			post: {
+				comments: [
+					2,
+					{
+						tags: [2],
+					},
+				],
+			},
+		});
+
+		expect(instance.post.id).toBe(instance.postId);
+		for (const comment of instance.post.comments) {
+			expect(comment.postId).toBe(instance.post.id);
+			if (comment.tags) {
+				for (const tag of comment.tags) {
+					expect(tag.commentId).toBe(comment.id);
+				}
+			}
+		}
+	});
+
+	it("should handle array-only nested relations", () => {
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+		}
+
+		const factory = new Factory(faker);
+
+		const post = factory.new(Post, {
+			comments: [5],
+		});
+
+		expect(post.comments).toHaveLength(5);
+		for (const comment of post.comments) {
+			expect(comment.postId).toBe(post.id);
+		}
+	});
+
+	it("should handle multiple independent relations", () => {
+		class Author {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+
+			@FactoryRelationField(() => [Author], { key: "id", inverseKey: "postId" })
+			authors: Author[];
+		}
+
+		const factory = new Factory(faker);
+		const post = factory.new(Post, {
+			comments: [2],
+			authors: [3],
+		});
+
+		expect(post.comments).toHaveLength(2);
+		expect(post.authors).toHaveLength(3);
+
+		for (const comment of post.comments) {
+			expect(comment.postId).toBe(post.id);
+		}
+
+		for (const author of post.authors) {
+			expect(author.postId).toBe(post.id);
+		}
+	});
 });

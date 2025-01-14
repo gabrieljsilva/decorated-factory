@@ -5,9 +5,7 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"types": "dist/index.d.ts",
 	"author": {
 		"email": "contato@gabrieljs.dev",
@@ -23,7 +21,9 @@
 		"pretest:coverage": "rimraf coverage",
 		"test:coverage": "vitest --coverage --run",
 		"prebuild": "rimraf dist",
-		"build": "rollup -c"
+		"build": "rollup -c",
+		"prelocal-pack": "rimraf decorated-factory-*.tgz",
+		"local-pack": "npm pack"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.8.3",

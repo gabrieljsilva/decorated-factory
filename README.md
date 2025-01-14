@@ -101,13 +101,13 @@ class Book {
 
   @FactoryRelationField(() => Chapter, {
     key: "id",
-    inverseField: "bookId",
+    inverseKey: "bookId",
   })
   chapter: Chapter;
 }
 ```
 
-When creating instances, the `key` from the parent will automatically bind to the `inverseField` in the child:
+When creating instances, the `key` from the parent will automatically bind to the `inverseKey` in the child:
 
 ```typescript
 const factory = new Factory(faker);

@@ -46,25 +46,66 @@ export class Factory {
 					const [instancesToCreate, relationSelect] = selectedField as [number, Select<unknown>];
 					instance[meta.property] = new Array(instancesToCreate).fill(null).map(() => {
 						const relationInstance = this.new(relationType, relationSelect);
+
+						// Handle primary binding
 						if (meta.keyBinding) {
 							const parentValue = resolvePath(instance, meta.keyBinding.key);
 							if (parentValue !== undefined) {
-								relationInstance[meta.keyBinding.inverseField] = parentValue;
+								relationInstance[meta.keyBinding.inverseKey] = parentValue;
 							}
 						}
+
+						// Handle nested relations
+						this.bindNestedRelations(relationInstance, instance);
+
 						return relationInstance;
 					});
 					continue;
 				}
 
 				const relationInstance = this.new<unknown>(relationType, selectedField);
+
+				// Handle primary binding
 				if (meta.keyBinding) {
 					const parentValue = resolvePath(instance, meta.keyBinding.key);
 					if (parentValue !== undefined) {
-						relationInstance[meta.keyBinding.inverseField] = parentValue;
+						relationInstance[meta.keyBinding.inverseKey] = parentValue;
 					}
 				}
+
+				// Handle nested relations
+				this.bindNestedRelations(relationInstance, instance);
+
 				instance[meta.property] = relationInstance;
+			}
+		}
+	}
+
+	private bindNestedRelations(relationInstance: any, parentInstance: any) {
+		// Get relation metadata for the relation instance
+		const nestedRelationMetadata: Array<FactoryRelationMetadata> =
+			Reflect.getMetadata(FACTORY_RELATION, relationInstance.constructor) || [];
+
+		for (const nestedMeta of nestedRelationMetadata) {
+			const nestedField = relationInstance[nestedMeta.property];
+			if (!nestedField) continue;
+
+			if (Array.isArray(nestedField)) {
+				for (const nested of nestedField) {
+					if (nestedMeta.keyBinding) {
+						const parentValue = resolvePath(relationInstance, nestedMeta.keyBinding.key);
+						if (parentValue !== undefined) {
+							nested[nestedMeta.keyBinding.inverseKey] = parentValue;
+						}
+					}
+				}
+			} else if (nestedField && typeof nestedField === "object") {
+				if (nestedMeta.keyBinding) {
+					const parentValue = resolvePath(relationInstance, nestedMeta.keyBinding.key);
+					if (parentValue !== undefined) {
+						nestedField[nestedMeta.keyBinding.inverseKey] = parentValue;
+					}
+				}
 			}
 		}
 	}
