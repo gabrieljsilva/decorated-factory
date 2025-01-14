@@ -61,7 +61,7 @@ describe("FactoryRelationField", () => {
 
 			@FactoryRelationField(() => Team, {
 				key: "id",
-				inverseField: "managerId",
+				inverseKey: "managerId",
 			})
 			team: Team;
 		}
@@ -81,7 +81,7 @@ describe("FactoryRelationField", () => {
 		class Book {
 			@FactoryRelationField(() => Chapter, {
 				key: "id",
-				inverseField: "bookId",
+				inverseKey: "bookId",
 			})
 			chapter: Chapter;
 		}
@@ -89,7 +89,7 @@ describe("FactoryRelationField", () => {
 		const metadata = Reflect.getMetadata(FACTORY_RELATION, Book)[0];
 		expect(metadata.keyBinding).toBeDefined();
 		expect(metadata.keyBinding.key).toBe("id");
-		expect(metadata.keyBinding.inverseField).toBe("bookId");
+		expect(metadata.keyBinding.inverseKey).toBe("bookId");
 	});
 
 	it("should generate a related entity for a single entity relationship", () => {

@@ -5,7 +5,7 @@ import { extendArrayMetadata } from "../utils";
 
 export interface RelationKeyBinding<Parent, Child> {
 	key: Paths<Parent>;
-	inverseField: Paths<Child>;
+	inverseKey: Paths<Child>;
 }
 
 export interface FactoryRelationMetadata {

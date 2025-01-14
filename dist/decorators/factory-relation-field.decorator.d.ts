@@ -2,7 +2,7 @@ import type { Paths } from "src/interfaces/paths";
 import type { Type } from "../interfaces";
 export interface RelationKeyBinding<Parent, Child> {
     key: Paths<Parent>;
-    inverseField: Paths<Child>;
+    inverseKey: Paths<Child>;
 }
 export interface FactoryRelationMetadata {
     property: string;

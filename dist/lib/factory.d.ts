@@ -9,5 +9,6 @@ export declare class Factory {
     new<T = any>(entity: Type<T>, select?: Select<T>): T;
     newList<T = any>(entity: Type<T>, amount: number, select?: Select<T>): Array<T>;
     private applyRelations;
+    private bindNestedRelations;
     private createInstance;
 }
