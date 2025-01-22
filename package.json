@@ -5,9 +5,22 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
+	"files": ["dist"],
+	"keywords": [
+		"factory",
+		"decorators",
+		"faker",
+		"object-generation",
+		"data-generation",
+		"testing",
+		"dependency-injection",
+		"typescript",
+		"entity-factory",
+		"relationship",
+		"override",
+		"object-array"
 	],
+
 	"types": "dist/index.d.ts",
 	"author": {
 		"email": "contato@gabrieljs.dev",
