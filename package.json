@@ -1,11 +1,13 @@
 {
 	"name": "decorated-factory",
 	"description": "A factory decorators for creating objects with faker data",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"keywords": [
 		"factory",
 		"decorators",
@@ -20,7 +22,6 @@
 		"override",
 		"object-array"
 	],
-
 	"types": "dist/index.d.ts",
 	"author": {
 		"email": "contato@gabrieljs.dev",
