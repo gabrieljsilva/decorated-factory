@@ -1481,11 +1481,15 @@ class Overridable {
         if (!override)
             return;
         for (const [key, value] of Object.entries(override)) {
+            if (value instanceof Date) {
+                entity[key] = value;
+                continue;
+            }
             if (Array.isArray(entity[key]) && Array.isArray(value)) {
                 this.mergeArray(entity[key], value);
                 continue;
             }
-            if (typeof value === "object" && typeof entity[key] === "object") {
+            if (value !== null && typeof value === "object" && typeof entity[key] === "object") {
                 this.deepMerge(entity[key], value);
                 continue;
             }
@@ -1494,7 +1498,11 @@ class Overridable {
     }
     mergeArray(entityArray, overrideArray) {
         for (const [index, valueToMerge] of overrideArray.entries()) {
-            if (typeof valueToMerge === "object") {
+            if (valueToMerge instanceof Date) {
+                entityArray[index] = valueToMerge;
+                continue;
+            }
+            if (typeof valueToMerge === "object" && valueToMerge !== null) {
                 this.deepMerge(entityArray[index], valueToMerge);
                 continue;
             }

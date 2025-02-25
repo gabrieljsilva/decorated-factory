@@ -5,9 +5,7 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"keywords": [
 		"factory",
 		"decorators",
@@ -57,8 +55,8 @@
 		"vitest": "^2.0.3"
 	},
 	"peerDependencies": {
-		"@faker-js/faker": "^8.4.1",
-		"reflect-metadata": "^0.2.2"
+		"@faker-js/faker": ">= 8.4.1",
+		"reflect-metadata": ">=0.2.2"
 	},
 	"dependencies": {}
 }
