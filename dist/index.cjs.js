@@ -1532,6 +1532,11 @@ class Factory {
     newList(entity, amount, select) {
         return new Array(amount).fill(null).map(() => this.new(entity, select));
     }
+    partial(entity, select) {
+        const instance = this.createPartialInstance(entity, select);
+        this.applyPartialRelations(entity, instance, select);
+        return instance;
+    }
     applyRelations(entity, instance, select) {
         const relationFieldMetadata = Reflect.getMetadata(FACTORY_RELATION, entity) || [];
         for (const meta of relationFieldMetadata) {
@@ -1544,30 +1549,28 @@ class Factory {
                     const [instancesToCreate, relationSelect] = selectedField;
                     instance[meta.property] = new Array(instancesToCreate).fill(null).map(() => {
                         const relationInstance = this.new(relationType, relationSelect);
-                        if (meta.keyBinding) {
-                            const parentValue = resolvePath(instance, meta.keyBinding.key);
-                            if (parentValue !== undefined) {
-                                relationInstance[meta.keyBinding.inverseKey] = parentValue;
-                            }
-                        }
-                        this.bindNestedRelations(relationInstance, instance);
+                        this.applyKeyBinding(meta, instance, relationInstance);
+                        this.bindNestedRelations(relationInstance);
                         return relationInstance;
                     });
                     continue;
                 }
                 const relationInstance = this.new(relationType, selectedField);
-                if (meta.keyBinding) {
-                    const parentValue = resolvePath(instance, meta.keyBinding.key);
-                    if (parentValue !== undefined) {
-                        relationInstance[meta.keyBinding.inverseKey] = parentValue;
-                    }
-                }
-                this.bindNestedRelations(relationInstance, instance);
+                this.applyKeyBinding(meta, instance, relationInstance);
+                this.bindNestedRelations(relationInstance);
                 instance[meta.property] = relationInstance;
             }
         }
     }
-    bindNestedRelations(relationInstance, parentInstance) {
+    applyKeyBinding(meta, parentInstance, relationInstance) {
+        if (meta.keyBinding) {
+            const parentValue = resolvePath(parentInstance, meta.keyBinding.key);
+            if (parentValue !== undefined) {
+                relationInstance[meta.keyBinding.inverseKey] = parentValue;
+            }
+        }
+    }
+    bindNestedRelations(relationInstance) {
         const nestedRelationMetadata = Reflect.getMetadata(FACTORY_RELATION, relationInstance.constructor) || [];
         for (const nestedMeta of nestedRelationMetadata) {
             const nestedField = relationInstance[nestedMeta.property];
@@ -1604,6 +1607,50 @@ class Factory {
             instance[meta.property] = meta.getValueFN(this.faker);
         }
         return instance;
+    }
+    createPartialInstance(entity, select) {
+        const instance = new entity();
+        const fieldMetadata = Reflect.getMetadata(FACTORY_FIELD, entity) || [];
+        for (const meta of fieldMetadata) {
+            const fieldSelect = select[meta.property];
+            if (fieldSelect === true) {
+                instance[meta.property] = meta.getValueFN(this.faker);
+            }
+        }
+        return instance;
+    }
+    applyPartialRelations(entity, instance, select) {
+        const relationFieldMetadata = Reflect.getMetadata(FACTORY_RELATION, entity) || [];
+        for (const meta of relationFieldMetadata) {
+            const selectedField = select[meta.property];
+            if (selectedField) {
+                const returnType = meta.returnTypeFn();
+                const isRelationArray = Array.isArray(returnType);
+                const relationType = isRelationArray ? returnType[0] : returnType;
+                if (isRelationArray) {
+                    const [instancesToCreate, relationSelect] = selectedField;
+                    instance[meta.property] = new Array(instancesToCreate).fill(null).map(() => {
+                        const relationInstance = this.partial(relationType, relationSelect || {});
+                        if (meta.keyBinding) {
+                            const parentValue = instance[meta.keyBinding.key];
+                            if (parentValue !== undefined) {
+                                relationInstance[meta.keyBinding.inverseKey] = parentValue;
+                            }
+                        }
+                        return relationInstance;
+                    });
+                    continue;
+                }
+                const relationInstance = this.partial(relationType, selectedField);
+                if (meta.keyBinding) {
+                    const parentValue = instance[meta.keyBinding.key];
+                    if (parentValue !== undefined) {
+                        relationInstance[meta.keyBinding.inverseKey] = parentValue;
+                    }
+                }
+                instance[meta.property] = relationInstance;
+            }
+        }
     }
 }
 

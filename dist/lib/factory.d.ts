@@ -1,5 +1,5 @@
 import type { Faker } from "@faker-js/faker";
-import type { Select, Type } from "../interfaces";
+import type { DeepPartial, Select, Type } from "../interfaces";
 import { Overridable } from "./overridable";
 export declare class Factory {
     private readonly faker;
@@ -8,7 +8,11 @@ export declare class Factory {
     createList<T>(entity: Type<T>, amount: number, select?: Select<T>): Overridable<T[]>;
     new<T = any>(entity: Type<T>, select?: Select<T>): T;
     newList<T = any>(entity: Type<T>, amount: number, select?: Select<T>): Array<T>;
+    partial<T = any>(entity: Type<T>, select: Select<T>): DeepPartial<T>;
     private applyRelations;
+    private applyKeyBinding;
     private bindNestedRelations;
     private createInstance;
+    private createPartialInstance;
+    private applyPartialRelations;
 }
