@@ -508,4 +508,432 @@ describe("Factory tests", () => {
 			expect(author.postId).toBe(post.id);
 		}
 	});
+
+	it("should create a partial entity with only selected fields", () => {
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.firstName())
+			firstName: string;
+
+			@FactoryField((faker) => faker.person.lastName())
+			lastName: string;
+
+			@FactoryField((faker) => faker.internet.email())
+			email: string;
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {
+			id: true,
+			firstName: true,
+		});
+
+		expect(partialUser).toHaveProperty("id");
+		expect(partialUser).toHaveProperty("firstName");
+		expect(partialUser).not.toHaveProperty("lastName");
+		expect(partialUser).not.toHaveProperty("email");
+		expect(typeof partialUser.id).toBe("number");
+		expect(typeof partialUser.firstName).toBe("string");
+	});
+
+	it("should create a partial entity with relations", () => {
+		class Photo {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.image.url())
+			url: string;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryField((faker) => faker.number.int())
+			userId: number;
+		}
+
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryRelationField(() => Photo, { key: "id", inverseKey: "userId" })
+			photo: Photo;
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {
+			id: true,
+			name: true,
+			photo: {
+				id: true,
+				url: true,
+			},
+		});
+
+		expect(partialUser).toHaveProperty("id");
+		expect(partialUser).toHaveProperty("name");
+		expect(partialUser).toHaveProperty("photo");
+		expect(partialUser.photo).toHaveProperty("id");
+		expect(partialUser.photo).toHaveProperty("url");
+		expect(partialUser.photo).not.toHaveProperty("description");
+		expect(typeof partialUser.id).toBe("number");
+		expect(typeof partialUser.name).toBe("string");
+		expect(typeof partialUser.photo.id).toBe("number");
+		expect(typeof partialUser.photo.url).toBe("string");
+		expect(partialUser.photo.userId).toBe(partialUser.id);
+	});
+
+	it("should create a partial entity with array relations", () => {
+		class Photo {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.image.url())
+			url: string;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryField((faker) => faker.number.int())
+			userId: number;
+		}
+
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
+			photos: Photo[];
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {
+			id: true,
+			name: true,
+			photos: [
+				1,
+				{
+					id: true,
+					url: true,
+				},
+			],
+		});
+
+		expect(partialUser).toHaveProperty("id");
+		expect(partialUser).toHaveProperty("name");
+		expect(partialUser).toHaveProperty("photos");
+		expect(Array.isArray(partialUser.photos)).toBeTruthy();
+		expect(partialUser.photos).toHaveLength(1);
+		expect(partialUser.photos[0]).toHaveProperty("id");
+		expect(partialUser.photos[0]).toHaveProperty("url");
+		expect(partialUser.photos[0]).not.toHaveProperty("description");
+		expect(typeof partialUser.id).toBe("number");
+		expect(typeof partialUser.name).toBe("string");
+		expect(typeof partialUser.photos[0].id).toBe("number");
+		expect(typeof partialUser.photos[0].url).toBe("string");
+		expect(partialUser.photos[0].userId).toBe(partialUser.id);
+	});
+
+	it("should handle nested relations in partial entities", () => {
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			photoId: number;
+		}
+
+		class Photo {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.image.url())
+			url: string;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryField((faker) => faker.number.int())
+			userId: number;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "photoId" })
+			comments: Comment[];
+		}
+
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
+			photos: Photo[];
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {
+			id: true,
+			photos: [
+				1,
+				{
+					id: true,
+					url: true,
+					comments: [
+						2,
+						{
+							id: true,
+							text: true,
+						},
+					],
+				},
+			],
+		});
+
+		expect(partialUser).toHaveProperty("id");
+		expect(partialUser).not.toHaveProperty("name");
+		expect(partialUser).toHaveProperty("photos");
+		expect(partialUser.photos).toHaveLength(1);
+		expect(partialUser.photos[0]).toHaveProperty("id");
+		expect(partialUser.photos[0]).toHaveProperty("url");
+		expect(partialUser.photos[0]).not.toHaveProperty("description");
+		expect(partialUser.photos[0]).toHaveProperty("comments");
+		expect(partialUser.photos[0].comments).toHaveLength(2);
+		expect(partialUser.photos[0].comments[0]).toHaveProperty("id");
+		expect(partialUser.photos[0].comments[0]).toHaveProperty("text");
+		expect(partialUser.photos[0].userId).toBe(partialUser.id);
+		expect(partialUser.photos[0].comments[0].photoId).toBe(partialUser.photos[0].id);
+	});
+
+	it("should handle empty selection object", () => {
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.firstName())
+			firstName: string;
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {});
+
+		expect(partialUser).not.toHaveProperty("id");
+		expect(partialUser).not.toHaveProperty("firstName");
+		expect(Object.keys(partialUser).length).toBe(0);
+	});
+
+	it("should ignore non-existent fields in selection", () => {
+		class User {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.firstName())
+			firstName: string;
+		}
+
+		const factory = new Factory(faker);
+		const partialUser = factory.partial(User, {
+			id: true,
+			nonExistentField: true,
+		} as any);
+
+		expect(partialUser).toHaveProperty("id");
+		expect(partialUser).not.toHaveProperty("firstName");
+		expect(partialUser).not.toHaveProperty("nonExistentField");
+		expect(Object.keys(partialUser).length).toBe(1);
+	});
+
+	it("should handle circular references in relations", () => {
+		class Parent {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryRelationField(() => Child, { key: "id", inverseKey: "parentId" })
+			child: Child;
+		}
+
+		class Child {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryField((faker) => faker.number.int())
+			parentId: number;
+
+			@FactoryRelationField(() => Parent, { key: "parentId", inverseKey: "id" })
+			parent: Parent;
+		}
+
+		const factory = new Factory(faker);
+		const partialParent = factory.partial(Parent, {
+			id: true,
+			name: true,
+			child: {
+				id: true,
+				name: true,
+				// We don't include parent here to avoid infinite recursion
+			},
+		});
+
+		expect(partialParent).toHaveProperty("id");
+		expect(partialParent).toHaveProperty("name");
+		expect(partialParent).toHaveProperty("child");
+		expect(partialParent.child).toHaveProperty("id");
+		expect(partialParent.child).toHaveProperty("name");
+		expect(partialParent.child).not.toHaveProperty("parent");
+		expect(partialParent.child.parentId).toBe(partialParent.id);
+	});
+
+	it("should handle complex nested structures with multiple levels", () => {
+		class GrandChild {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryField((faker) => faker.number.int())
+			childId: number;
+		}
+
+		class Child {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryField((faker) => faker.number.int())
+			parentId: number;
+
+			@FactoryRelationField(() => [GrandChild], { key: "id", inverseKey: "childId" })
+			grandChildren: GrandChild[];
+		}
+
+		class Parent {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryRelationField(() => [Child], { key: "id", inverseKey: "parentId" })
+			children: Child[];
+		}
+
+		const factory = new Factory(faker);
+		const partialParent = factory.partial(Parent, {
+			id: true,
+			name: true,
+			children: [
+				2,
+				{
+					id: true,
+					name: true,
+					grandChildren: [
+						3,
+						{
+							id: true,
+							name: true,
+						},
+					],
+				},
+			],
+		});
+
+		expect(partialParent).toHaveProperty("id");
+		expect(partialParent).toHaveProperty("name");
+		expect(partialParent).toHaveProperty("children");
+		expect(partialParent.children).toHaveLength(2);
+		expect(partialParent.children[0]).toHaveProperty("id");
+		expect(partialParent.children[0]).toHaveProperty("name");
+		expect(partialParent.children[0]).toHaveProperty("grandChildren");
+		expect(partialParent.children[0].grandChildren).toHaveLength(3);
+		expect(partialParent.children[0].grandChildren[0]).toHaveProperty("id");
+		expect(partialParent.children[0].grandChildren[0]).toHaveProperty("name");
+		expect(partialParent.children[0].parentId).toBe(partialParent.id);
+		expect(partialParent.children[0].grandChildren[0].childId).toBe(partialParent.children[0].id);
+	});
+
+	it("should handle mixing array and single relations in the same entity", () => {
+		class Category {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.commerce.department())
+			name: string;
+		}
+
+		class Comment {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			text: string;
+
+			@FactoryField((faker) => faker.number.int())
+			postId: number;
+		}
+
+		class Post {
+			@FactoryField((faker) => faker.number.int())
+			id: number;
+
+			@FactoryField((faker) => faker.lorem.sentence())
+			title: string;
+
+			@FactoryField((faker) => faker.number.int())
+			categoryId: number;
+
+			@FactoryRelationField(() => Category, { key: "categoryId", inverseKey: "id" })
+			category: Category;
+
+			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			comments: Comment[];
+		}
+
+		const factory = new Factory(faker);
+		const partialPost = factory.partial(Post, {
+			id: true,
+			title: true,
+			category: {
+				id: true,
+				name: true,
+			},
+			comments: [
+				2,
+				{
+					id: true,
+					text: true,
+				},
+			],
+		});
+
+		expect(partialPost).toHaveProperty("id");
+		expect(partialPost).toHaveProperty("title");
+		expect(partialPost).toHaveProperty("category");
+		expect(partialPost).toHaveProperty("comments");
+		expect(partialPost.category).toHaveProperty("id");
+		expect(partialPost.category).toHaveProperty("name");
+		expect(partialPost.comments).toHaveLength(2);
+		expect(partialPost.comments[0]).toHaveProperty("id");
+		expect(partialPost.comments[0]).toHaveProperty("text");
+		expect(partialPost.category.id).toBe(partialPost.category.id);
+		expect(partialPost.comments[0].postId).toBe(partialPost.id);
+	});
 });
