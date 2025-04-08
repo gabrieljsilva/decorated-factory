@@ -195,3 +195,188 @@ const amount = 3;
 const overridable = factory.createList(Product, amount);
 expect(overridable).toBeInstanceOf(Overridable);
 ```
+
+### Subset Selection with partial
+
+The `partial` method allows you to create an instance of an entity with only a subset of its fields. This is useful when you only need specific fields of an entity for testing or other purposes.
+
+```typescript
+class User {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryField((faker) => faker.person.firstName())
+  firstName: string;
+
+  @FactoryField((faker) => faker.person.lastName())
+  lastName: string;
+
+  @FactoryField((faker) => faker.internet.email())
+  email: string;
+}
+
+const factory = new Factory(faker);
+const partialUser = factory.partial(User, {
+  id: true,
+  firstName: true,
+});
+```
+
+In this example, only the `id` and `firstName` fields will be generated, while `lastName` and `email` will be undefined.
+
+#### Partial with Relations
+
+The `partial` method also supports relationships between entities. You can specify which fields of the related entity should be included.
+
+```typescript
+class Photo {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryField((faker) => faker.image.url())
+  url: string;
+
+  @FactoryField((faker) => faker.lorem.sentence())
+  description: string;
+}
+
+class User {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryField((faker) => faker.person.fullName())
+  name: string;
+
+  @FactoryRelationField(() => Photo)
+  photo: Photo;
+}
+
+const factory = new Factory(faker);
+const partialUser = factory.partial(User, {
+  id: true,
+  name: true,
+  photo: {
+    id: true,
+    url: true,
+  },
+});
+```
+
+In this example, the `User` instance will have `id` and `name` fields, and a related `Photo` with only `id` and `url` fields.
+
+#### Partial with Array Relations
+
+The `partial` method also supports array relationships. You can specify the number of instances to create and which fields to include.
+
+```typescript
+class User {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryRelationField(() => [Photo])
+  photos: Photo[];
+}
+
+const factory = new Factory(faker);
+const partialUser = factory.partial(User, {
+  id: true,
+  photos: [
+    1,
+    {
+      id: true,
+      url: true,
+    },
+  ],
+});
+```
+
+In this example, the `User` instance will have an `id` field and an array with one `Photo` that only has `id` and `url` fields.
+
+#### Key Binding in Partial Entities
+
+When using the `partial` method with relations that have key binding, the key binding properties will ALWAYS be included in the output, even if you don't explicitly request them. This is necessary to maintain the relationship between entities.
+
+For example:
+
+```typescript
+class Comment {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryField((faker) => faker.lorem.sentence())
+  text: string;
+
+  @FactoryField((faker) => faker.number.int())
+  photoId: number;
+}
+
+class Photo {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryField((faker) => faker.image.url())
+  url: string;
+
+  @FactoryField((faker) => faker.number.int())
+  userId: number;
+
+  @FactoryRelationField(() => [Comment], { key: "id", inverseKey: "photoId" })
+  comments: Comment[];
+}
+
+class User {
+  @FactoryField((faker) => faker.number.int())
+  id: number;
+
+  @FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
+  photos: Photo[];
+}
+
+const factory = new Factory(faker);
+const partialUser = factory.partial(User, {
+  id: true,
+  photos: [
+    1,
+    {
+      id: true,
+      url: true,
+      comments: [
+        2,
+        {
+          id: true,
+          text: true,
+        },
+      ],
+    },
+  ],
+});
+```
+
+Even though we only requested `id`, `url`, `comments.id`, and `comments.text`, the output will also include `userId` in the Photo object and `photoId` in the Comment objects:
+
+```json
+{
+  "id": 1,
+  "photos": [
+    {
+      "id": 2,
+      "url": "https://picsum.photos/seed/7ggB4tRnW/640/480",
+      "comments": [
+        {
+          "id": 3,
+          "text": "Degusto suffragium admoneo comminor quis suus urbs.",
+          "photoId": 2
+        },
+        {
+          "id": 4,
+          "text": "Depromo cura molestias accusamus utrum delibero cum voco deserunt ipsum.",
+          "photoId": 2
+        }
+      ],
+      "userId": 1
+    }
+  ]
+}
+```
+
+This is because the key binding properties (`userId` and `photoId`) are necessary to establish the relationships between the entities.
