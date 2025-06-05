@@ -5,12 +5,12 @@ import { FactoryField } from "./factory-field.decorator";
 describe("FactoryField tests", () => {
 	it("should add metadata field", () => {
 		const getValueFn = () => "Hello World";
-		class DummyEntity {
+		class Cat {
 			@FactoryField(getValueFn)
 			field: string;
 		}
 
-		const metadata = Reflect.getMetadata(FACTORY_FIELD, DummyEntity);
+		const metadata = Reflect.getMetadata(FACTORY_FIELD, Cat);
 		expect(metadata).toEqual([
 			{
 				property: "field",

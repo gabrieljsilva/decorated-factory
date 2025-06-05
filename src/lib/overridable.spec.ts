@@ -1,4 +1,3 @@
-// overridable.spec.ts
 import "reflect-metadata";
 import { describe, expect, it } from "vitest";
 import { Overridable } from "./overridable";
