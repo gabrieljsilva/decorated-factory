@@ -1,13 +1,10 @@
 # Decorated Factory
-A factory decorators for creating objects with faker data
+A factory tool for creating objects with faker data
 
 ## Purpose
-
 Decorated Factory is a tool for creating instances of classes, especially useful in testing scenarios where you need to generate data.
-
 It uses decorators to define how to generate data for each field of a class, also supports relationships between entities and arrays of entities.
-
-This project was inspired by the way queries are made in PrismaORM.
+This project was inspired by the way queries are made in [PrismaORM](https://www.prisma.io/orm).
 
 ## Installation
 ```bash
@@ -20,18 +17,15 @@ yarn add decorated-factory @faker-js/faker --dev
 yarn add reflect-metadata
 ```
 
-## Usage
-
-### Basic Usage
-Ensure import reflect-metadata at the entry point of your application.
+## Basic Usage
+Import reflect-metadata at the entry point of your application:
 
 ```typescript
 import 'reflect-metadata';
 // rest of your code...
 ```
 
-To use the Factory utility, you first need to define a class and use the `@FactoryField` decorator to specify how to generate data for each field. The decorator takes a function that receives a `faker` instance and returns the generated data.
-
+Define a class with the `@FactoryField` decorator to specify how to generate data:
 
 ```typescript
 class Product {
@@ -42,19 +36,18 @@ class Product {
   name: string;
 }
 ```
-> PS: the faker is not imported in the production bundle, because the decorator import only the faker type.
+> Note: faker is only imported as a type in decorators, not in the production bundle.
 
-
-Then, you can use the Factory utility to create instances of this class.
+Create instances using the Factory:
 
 ```typescript
 const factory = new Factory(faker);
 const product = factory.one(Product).make();
 ```
 
-### Relationships
+## Relationships
 
-The Factory utility also supports relationships between entities. You can use the `@FactoryRelationField` decorator to specify a related entity.
+Use `@FactoryRelationField` to define relationships between entities:
 
 ```typescript
 class Review {
@@ -71,7 +64,7 @@ class Product {
 }
 ```
 
-Then, you can create an instance of the main entity, and the Factory utility will automatically create an instance of the related entity.
+Create an instance with the related entity:
 
 ```typescript
 const factory = new Factory(faker);
@@ -80,11 +73,9 @@ const product = factory.one(Product).make({
 });
 ```
 
-#### Key Binding
+## Key Binding
 
-The `@FactoryRelationField` decorator supports key binding, which allows you to specify how a parent entity's field is related to a child entity's field. This is useful for scenarios like foreign key relationships in databases.
-
-Here is how you can use it:
+Key binding connects parent and child entities through related fields:
 
 ```typescript
 class Chapter {
@@ -107,7 +98,7 @@ class Book {
 }
 ```
 
-When creating instances, the `key` from the parent will automatically bind to the `inverseKey` in the child:
+The parent's key automatically binds to the child's inverseKey:
 
 ```typescript
 const factory = new Factory(faker);
@@ -116,9 +107,9 @@ const book = factory.one(Book).make({ chapter: true });
 console.log(book.chapter.bookId === book.id); // true
 ```
 
-### Arrays
+## Arrays
 
-The Factory utility can also handle arrays of entities. You can specify an array of a certain entity in the `@FactoryRelationField` decorator.
+Create arrays of related entities:
 
 ```typescript
 class Product {
@@ -127,38 +118,43 @@ class Product {
 }
 ```
 
-Then, you can create an instance of the main entity, and the Factory utility will automatically create an array of instances of the related entity.
+Specify the number of instances to create:
 
 ```typescript
 const factory = new Factory(faker);
 const product = factory.one(Product).make({
-  reviews: [3],
+  reviews: [3], // Creates 3 reviews
 });
 ```
 
-You can also specify the instances of array relationships
+Or create a specific number:
 
 ```typescript
 const factory = new Factory(faker);
 const product = factory.one(Product).make({
-  reviews: [1],
+  reviews: [1], // Creates 1 review
 });
 ```
 
-### Creating Entities with the Factory API
+## Creating Entities
 
-The Factory API provides a fluent interface for creating entities with optional overrides.
-
-#### Creating a Single Entity
-
-The `one` method creates a factory for a single entity instance:
+Create a single entity:
 
 ```typescript
 const factory = new Factory(faker);
 const product = factory.one(Product).make();
 ```
 
-You can also override properties of the entity:
+Create multiple entities:
+
+```typescript
+const factory = new Factory(faker);
+const products = factory.many(Product, 5).make();
+```
+
+## Overriding Properties
+
+Override properties of a single entity:
 
 ```typescript
 const product = factory.one(Product).override(instance => ({
@@ -166,18 +162,7 @@ const product = factory.one(Product).override(instance => ({
 })).make();
 ```
 
-In this example, the `name` field of the `Product` instance will be 'Hello World', regardless of the function provided in the `@FactoryField` decorator.
-
-#### Creating Multiple Entities
-
-The `many` method creates a factory for multiple entity instances:
-
-```typescript
-const factory = new Factory(faker);
-const products = factory.many(Product, 5).make();
-```
-
-You can also override properties of the entities:
+Override properties of multiple entities:
 
 ```typescript
 const products = factory.many(Product, 5).override(instances => 
@@ -185,66 +170,34 @@ const products = factory.many(Product, 5).override(instances =>
 ).make();
 ```
 
-### Overriding
-
-The `override` method allows you to modify the generated entities before they are returned. The function receives the current instance(s) as a parameter and should return an object (or array of objects) with the fields to override.
+Apply custom overrides to multiple entities:
 
 ```typescript
-const product = factory.one(Product).override(instance => ({
-  name: 'New Name',
-})).make();
-```
-
-In this example, the `name` field of the `Product` instance will be 'New Name', regardless of the function provided in the `@FactoryField` decorator.
-
-### Creating Lists of Entities
-
-The Factory utility provides methods to create lists of entities, which can be useful for generating data for testing collections or arrays of objects.
-
-#### Creating Multiple Entities
-
-The `many` method allows you to create multiple instances of a class.
-
-```typescript
-const factory = new Factory(faker);
-const amount = 3;
-const products = factory.many(Product, amount).make();
-expect(products).toHaveLength(amount); // true
-```
-
-You can also override properties of the entities:
-
-```typescript
-const factory = new Factory(faker);
 const amount = 3;
 const products = factory.many(Product, amount)
   .override(instances => instances.map(instance => ({ name: 'Custom Name' })))
   .make();
 ```
 
-### Subset Selection with partial
+## Partial Entities
 
-The `partial` method allows you to create an instance of an entity with only a subset of its fields. This is useful when you only need specific fields of an entity for testing or other purposes.
-
-#### Using the Builder Pattern
-
-Use the builder pattern with `one()` and `many()` methods:
+Create entities with only specific fields:
 
 ```typescript
-// Create a single partial entity
+// Single partial entity
 const user = factory.one(User).partial({
   id: true,
   firstName: true,
 }).make();
 
-// Create multiple partial entities
+// Multiple partial entities
 const users = factory.many(User, 3).partial({
   id: true,
   firstName: true,
 }).make();
 ```
 
-You can also chain the `partial` method with `override`:
+Chain partial with override:
 
 ```typescript
 const user = factory.one(User)
@@ -258,13 +211,9 @@ const user = factory.one(User)
   .make();
 ```
 
-In these examples, only the `id` and `firstName` fields will be generated, while `lastName` and `email` will be undefined.
+## Partial with Relations
 
-#### Partial with Relations
-
-The `partial` method also supports relationships between entities. You can specify which fields of the related entity should be included.
-
-##### Using the Factory directly
+Include specific fields from related entities:
 
 ```typescript
 class Photo {
@@ -289,20 +238,7 @@ class User {
   photo: Photo;
 }
 
-const factory = new Factory(faker);
-const partialUser = factory.partial(User, {
-  id: true,
-  name: true,
-  photo: {
-    id: true,
-    url: true,
-  },
-});
-```
-
-##### Using the Builder Pattern
-
-```typescript
+// Create a user with only id and name, and a photo with only id and url
 const user = factory.one(User).partial({
   id: true,
   name: true,
@@ -313,13 +249,9 @@ const user = factory.one(User).partial({
 }).make();
 ```
 
-In these examples, the `User` instance will have `id` and `name` fields, and a related `Photo` with only `id` and `url` fields.
+## Partial with Array Relations
 
-#### Partial with Array Relations
-
-The `partial` method also supports array relationships. You can specify the number of instances to create and which fields to include.
-
-##### Using the Factory directly
+Specify the number of array items and their fields:
 
 ```typescript
 class User {
@@ -330,26 +262,11 @@ class User {
   photos: Photo[];
 }
 
-const factory = new Factory(faker);
-const partialUser = factory.partial(User, {
-  id: true,
-  photos: [
-    1,
-    {
-      id: true,
-      url: true,
-    },
-  ],
-});
-```
-
-##### Using the Builder Pattern
-
-```typescript
+// Create a user with one photo that has only id and url
 const user = factory.one(User).partial({
   id: true,
   photos: [
-    1,
+    1, // Create 1 photo
     {
       id: true,
       url: true,
@@ -358,13 +275,9 @@ const user = factory.one(User).partial({
 }).make();
 ```
 
-In these examples, the `User` instance will have an `id` field and an array with one `Photo` that only has `id` and `url` fields.
+## Key Binding in Partial Entities
 
-#### Key Binding in Partial Entities
-
-When using the `partial` method with relations that have key binding, the key binding properties will ALWAYS be included in the output, even if you don't explicitly request them. This is necessary to maintain the relationship between entities.
-
-For example:
+When using partial with key binding, relationship fields are always included:
 
 ```typescript
 class Comment {
@@ -375,7 +288,7 @@ class Comment {
   text: string;
 
   @FactoryField((faker) => faker.number.int())
-  photoId: number;
+  photoId: number; // Will be included automatically
 }
 
 class Photo {
@@ -386,7 +299,7 @@ class Photo {
   url: string;
 
   @FactoryField((faker) => faker.number.int())
-  userId: number;
+  userId: number; // Will be included automatically
 
   @FactoryRelationField(() => [Comment], { key: "id", inverseKey: "photoId" })
   comments: Comment[];
@@ -400,8 +313,8 @@ class User {
   photos: Photo[];
 }
 
-const factory = new Factory(faker);
-const partialUser = factory.partial(User, {
+// Even though we only request specific fields, relationship fields are included
+const partialUser = factory.one(User).partial({
   id: true,
   photos: [
     1,
@@ -417,11 +330,10 @@ const partialUser = factory.partial(User, {
       ],
     },
   ],
-});
+}).make();
 ```
 
-Even though we only requested `id`, `url`, `comments.id`, and `comments.text`, the output will also include `userId` in the Photo object and `photoId` in the Comment objects:
-
+Example output:
 ```json
 {
   "id": 1,
@@ -433,30 +345,26 @@ Even though we only requested `id`, `url`, `comments.id`, and `comments.text`, t
         {
           "id": 3,
           "text": "Degusto suffragium admoneo comminor quis suus urbs.",
-          "photoId": 2
+          "photoId": 2 // Included automatically
         },
         {
           "id": 4,
           "text": "Depromo cura molestias accusamus utrum delibero cum voco deserunt ipsum.",
-          "photoId": 2
+          "photoId": 2 // Included automatically
         }
       ],
-      "userId": 1
+      "userId": 1 // Included automatically
     }
   ]
 }
 ```
 
-This is because the key binding properties (`userId` and `photoId`) are necessary to establish the relationships between the entities.
-
 ## Deprecated Methods
 
-The following methods are deprecated and will be removed in the next major release:
+Methods to be removed in the next major release:
 
-### Factory Class
-
-- `new(entity, select?)` - Use `factory.one(entity).make()` instead
-- `newList(entity, amount, select?)` - Use `factory.many(entity, amount).make()` instead
-- `create(entity, select?)` - Use `factory.one(entity).override().make()` instead
-- `createList(entity, amount, select?)` - Use `factory.many(entity, amount).override().make()` instead
-- `partial(entity, select)` - Use `factory.one(entity).partial(select).make()` or `factory.many(entity, amount).partial(select).make()` instead
+- `new(entity, select?)` → Use `factory.one(entity).make()`
+- `newList(entity, amount, select?)` → Use `factory.many(entity, amount).make()`
+- `create(entity, select?)` → Use `factory.one(entity).override().make()`
+- `createList(entity, amount, select?)` → Use `factory.many(entity, amount).override().make()`
+- `partial(entity, select)` → Use `factory.one(entity).partial(select).make()` or `factory.many(entity, amount).partial(select).make()`
