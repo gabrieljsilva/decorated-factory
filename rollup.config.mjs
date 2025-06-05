@@ -9,13 +9,20 @@ export default {
 			file: "dist/index.cjs.js",
 			format: "cjs",
 			sourcemap: true,
+			globals: {
+				'reflect-metadata': 'Reflect'
+			}
 		},
 		{
 			file: "dist/index.esm.js",
 			format: "es",
 			sourcemap: true,
+			globals: {
+				'reflect-metadata': 'Reflect'
+			}
 		},
 	],
+	external: ['reflect-metadata'],
 	plugins: [
 		resolve(),
 		commonjs(),
