@@ -49,7 +49,7 @@ Then, you can use the Factory utility to create instances of this class.
 
 ```typescript
 const factory = new Factory(faker);
-const product = factory.new(Product);
+const product = factory.one(Product).make();
 ```
 
 ### Relationships
@@ -75,7 +75,7 @@ Then, you can create an instance of the main entity, and the Factory utility wil
 
 ```typescript
 const factory = new Factory(faker);
-const product = factory.new(Product, {
+const product = factory.one(Product).make({
   review: true,
 });
 ```
@@ -111,7 +111,7 @@ When creating instances, the `key` from the parent will automatically bind to th
 
 ```typescript
 const factory = new Factory(faker);
-const book = factory.new(Book, { chapter: true });
+const book = factory.one(Book).make({ chapter: true });
 
 console.log(book.chapter.bookId === book.id); // true
 ```
@@ -131,7 +131,7 @@ Then, you can create an instance of the main entity, and the Factory utility wil
 
 ```typescript
 const factory = new Factory(faker);
-const product = factory.new(Product, {
+const product = factory.one(Product).make({
   reviews: [3],
 });
 ```
@@ -140,32 +140,59 @@ You can also specify the instances of array relationships
 
 ```typescript
 const factory = new Factory(faker);
-const product = factory.new(Product, {
+const product = factory.one(Product).make({
   reviews: [1],
 });
 ```
 
-### Difference between "new" and "create"
+### Creating Entities with the Factory API
 
-The `new` method of the Factory utility creates a new instance of a class, while the `create` method creates an instance of the `Overridable` class that wraps the original instance. The `Overridable` class provides a `override` method that allows you to override the values of the instance.
+The Factory API provides a fluent interface for creating entities with optional overrides.
+
+#### Creating a Single Entity
+
+The `one` method creates a factory for a single entity instance:
 
 ```typescript
 const factory = new Factory(faker);
-const overridable = factory.create(Product);
-const product = overridable.override(() => ({ name: 'Hello World' }));
+const product = factory.one(Product).make();
+```
+
+You can also override properties of the entity:
+
+```typescript
+const product = factory.one(Product).override(instance => ({
+  name: 'Hello World'
+})).make();
 ```
 
 In this example, the `name` field of the `Product` instance will be 'Hello World', regardless of the function provided in the `@FactoryField` decorator.
 
-### Overriding
+#### Creating Multiple Entities
 
-The `Overridable` class provides a way to override the values of an instance. You can use the `override` method and provide a function that returns an object with the fields to override. The function receives the current instance as a parameter.
+The `many` method creates a factory for multiple entity instances:
 
 ```typescript
-const overridable = factory.create(Product);
-const product = overridable.override((instance) => ({
+const factory = new Factory(faker);
+const products = factory.many(Product, 5).make();
+```
+
+You can also override properties of the entities:
+
+```typescript
+const products = factory.many(Product, 5).override(instances => 
+  instances.map(instance => ({ name: 'Product ' + instance.id }))
+).make();
+```
+
+### Overriding
+
+The `override` method allows you to modify the generated entities before they are returned. The function receives the current instance(s) as a parameter and should return an object (or array of objects) with the fields to override.
+
+```typescript
+const product = factory.one(Product).override(instance => ({
   name: 'New Name',
-}));
+})).make();
 ```
 
 In this example, the `name` field of the `Product` instance will be 'New Name', regardless of the function provided in the `@FactoryField` decorator.
@@ -174,59 +201,70 @@ In this example, the `name` field of the `Product` instance will be 'New Name', 
 
 The Factory utility provides methods to create lists of entities, which can be useful for generating data for testing collections or arrays of objects.
 
-#### newList Method
+#### Creating Multiple Entities
 
-The `newList` method allows you to create a list of new instances of a class.
+The `many` method allows you to create multiple instances of a class.
 
 ```typescript
 const factory = new Factory(faker);
 const amount = 3;
-const products = factory.newList(Product, amount);
-expect(products).toHaveLength(amount);
+const products = factory.many(Product, amount).make();
+expect(products).toHaveLength(amount); // true
 ```
 
-#### createList Method
-
-The `createList` method allows you to create a `Overridable` instance of generated objects, which can then be overridden as needed.
+You can also override properties of the entities:
 
 ```typescript
 const factory = new Factory(faker);
 const amount = 3;
-const overridable = factory.createList(Product, amount);
-expect(overridable).toBeInstanceOf(Overridable);
+const products = factory.many(Product, amount)
+  .override(instances => instances.map(instance => ({ name: 'Custom Name' })))
+  .make();
 ```
 
 ### Subset Selection with partial
 
 The `partial` method allows you to create an instance of an entity with only a subset of its fields. This is useful when you only need specific fields of an entity for testing or other purposes.
 
+#### Using the Builder Pattern
+
+Use the builder pattern with `one()` and `many()` methods:
+
 ```typescript
-class User {
-  @FactoryField((faker) => faker.number.int())
-  id: number;
-
-  @FactoryField((faker) => faker.person.firstName())
-  firstName: string;
-
-  @FactoryField((faker) => faker.person.lastName())
-  lastName: string;
-
-  @FactoryField((faker) => faker.internet.email())
-  email: string;
-}
-
-const factory = new Factory(faker);
-const partialUser = factory.partial(User, {
+// Create a single partial entity
+const user = factory.one(User).partial({
   id: true,
   firstName: true,
-});
+}).make();
+
+// Create multiple partial entities
+const users = factory.many(User, 3).partial({
+  id: true,
+  firstName: true,
+}).make();
 ```
 
-In this example, only the `id` and `firstName` fields will be generated, while `lastName` and `email` will be undefined.
+You can also chain the `partial` method with `override`:
+
+```typescript
+const user = factory.one(User)
+  .partial({
+    id: true,
+    firstName: true,
+  })
+  .override(() => ({
+    firstName: 'Custom Name',
+  }))
+  .make();
+```
+
+In these examples, only the `id` and `firstName` fields will be generated, while `lastName` and `email` will be undefined.
 
 #### Partial with Relations
 
 The `partial` method also supports relationships between entities. You can specify which fields of the related entity should be included.
+
+##### Using the Factory directly
 
 ```typescript
 class Photo {
@@ -262,11 +300,26 @@ const partialUser = factory.partial(User, {
 });
 ```
 
-In this example, the `User` instance will have `id` and `name` fields, and a related `Photo` with only `id` and `url` fields.
+##### Using the Builder Pattern
+
+```typescript
+const user = factory.one(User).partial({
+  id: true,
+  name: true,
+  photo: {
+    id: true,
+    url: true,
+  },
+}).make();
+```
+
+In these examples, the `User` instance will have `id` and `name` fields, and a related `Photo` with only `id` and `url` fields.
 
 #### Partial with Array Relations
 
 The `partial` method also supports array relationships. You can specify the number of instances to create and which fields to include.
+
+##### Using the Factory directly
 
 ```typescript
 class User {
@@ -290,7 +343,22 @@ const partialUser = factory.partial(User, {
 });
 ```
 
-In this example, the `User` instance will have an `id` field and an array with one `Photo` that only has `id` and `url` fields.
+##### Using the Builder Pattern
+
+```typescript
+const user = factory.one(User).partial({
+  id: true,
+  photos: [
+    1,
+    {
+      id: true,
+      url: true,
+    },
+  ],
+}).make();
+```
+
+In these examples, the `User` instance will have an `id` field and an array with one `Photo` that only has `id` and `url` fields.
 
 #### Key Binding in Partial Entities
 
@@ -380,3 +448,15 @@ Even though we only requested `id`, `url`, `comments.id`, and `comments.text`, t
 ```
 
 This is because the key binding properties (`userId` and `photoId`) are necessary to establish the relationships between the entities.
+
+## Deprecated Methods
+
+The following methods are deprecated and will be removed in the next major release:
+
+### Factory Class
+
+- `new(entity, select?)` - Use `factory.one(entity).make()` instead
+- `newList(entity, amount, select?)` - Use `factory.many(entity, amount).make()` instead
+- `create(entity, select?)` - Use `factory.one(entity).override().make()` instead
+- `createList(entity, amount, select?)` - Use `factory.many(entity, amount).override().make()` instead
+- `partial(entity, select)` - Use `factory.one(entity).partial(select).make()` or `factory.many(entity, amount).partial(select).make()` instead
