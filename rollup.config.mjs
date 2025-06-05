@@ -8,21 +8,23 @@ export default {
 		{
 			file: "dist/index.cjs.js",
 			format: "cjs",
-			sourcemap: true,
+			sourcemap: false,
 			globals: {
-				'reflect-metadata': 'Reflect'
+				'reflect-metadata': 'Reflect',
+				'@faker-js/faker': 'faker'
 			}
 		},
 		{
 			file: "dist/index.esm.js",
 			format: "es",
-			sourcemap: true,
+			sourcemap: false,
 			globals: {
-				'reflect-metadata': 'Reflect'
+				'reflect-metadata': 'Reflect',
+				'@faker-js/faker': 'faker'
 			}
 		},
 	],
-	external: ['reflect-metadata'],
+	external: ['reflect-metadata', '@faker-js/faker'],
 	plugins: [
 		resolve(),
 		commonjs(),
