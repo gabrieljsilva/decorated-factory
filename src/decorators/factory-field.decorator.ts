@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import type { Faker } from "@faker-js/faker";
 import { FACTORY_FIELD } from "../constants";
 import { extendArrayMetadata } from "../utils";

@@ -5,9 +5,7 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"keywords": [
 		"factory",
 		"decorators",
@@ -34,11 +32,11 @@
 	},
 	"scripts": {
 		"test": "vitest --run",
-		"pretest:coverage": "rimraf coverage",
+		"pretest:coverage": "rimraf -g coverage",
 		"test:coverage": "vitest --coverage --run",
-		"prebuild": "rimraf dist",
+		"prebuild": "rimraf -g dist",
 		"build": "rollup -c",
-		"prelocal-pack": "rimraf decorated-factory-*.tgz",
+		"prelocal-pack": "rimraf -g decorated-factory-*.tgz",
 		"local-pack": "npm pack"
 	},
 	"devDependencies": {
