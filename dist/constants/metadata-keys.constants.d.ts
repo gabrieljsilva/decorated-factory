@@ -1,2 +1,2 @@
-export declare const FACTORY_FIELD: unique symbol;
-export declare const FACTORY_RELATION: unique symbol;
+export declare const FACTORY_VALUE: unique symbol;
+export declare const FACTORY_TYPE: unique symbol;

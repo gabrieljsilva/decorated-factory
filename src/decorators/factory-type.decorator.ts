@@ -1,5 +1,5 @@
 import type { Paths } from "src/interfaces/paths";
-import { FACTORY_RELATION } from "../constants";
+import { FACTORY_TYPE } from "../constants";
 import type { Type } from "../interfaces";
 import { extendArrayMetadata } from "../utils";
 
@@ -8,23 +8,23 @@ export interface RelationKeyBinding<Parent, Child> {
 	inverseKey: Paths<Child>;
 }
 
-export interface FactoryRelationMetadata {
+export interface FactoryTypeMetadata {
 	property: string;
 	returnTypeFn: () => Type | [Type];
 	keyBinding?: RelationKeyBinding<any, any>;
 }
 
-export function FactoryRelationField<Parent, Child>(
+export function FactoryType<Parent, Child>(
 	returnValueFN: () => Type<Child> | [Type<Child>],
 	keyBinding?: RelationKeyBinding<Parent, Child>,
 ) {
 	return (target: NonNullable<any>, propertyKey: string) => {
-		const factoryRelationMetadata: FactoryRelationMetadata = {
+		const factoryRelationMetadata: FactoryTypeMetadata = {
 			property: propertyKey,
 			returnTypeFn: returnValueFN,
 			keyBinding,
 		};
 
-		extendArrayMetadata(FACTORY_RELATION, [factoryRelationMetadata], target.constructor);
+		extendArrayMetadata(FACTORY_TYPE, [factoryRelationMetadata], target.constructor);
 	};
 }

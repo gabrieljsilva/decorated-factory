@@ -1,370 +1,451 @@
 # Decorated Factory
-A factory tool for creating objects with faker data
 
-## Purpose
-Decorated Factory is a tool for creating instances of classes, especially useful in testing scenarios where you need to generate data.
-It uses decorators to define how to generate data for each field of a class, also supports relationships between entities and arrays of entities.
-This project was inspired by the way queries are made in [PrismaORM](https://www.prisma.io/orm).
+A **declarative**, **type‑safe** factory for generating realistic data in tests, fixtures and seeders – no hand‑written mocks, no hidden globals.
+
+---
+
+## Table of contents
+
+* [Overview](#overview)
+* [Installation](#installation)
+* [Quick‑start](#quick-start)
+* [Core concepts](#core-concepts)
+* [Built‑in JavaScript types](#built-in-javascript-types)
+* [Built‑in helpers](#built-in-helpers)
+* [Generating instances](#generating-instances)
+* [Defining relationships](#defining-relationships)
+* [Nested graphs & circular refs](#nested-graphs--circular-refs)
+* [Key binding (foreign keys)](#key-binding-foreign-keys)
+* [Arrays & amounts](#arrays--amounts)
+* [Overriding values with `set`](#overriding-values-with-set)
+* [Excluding fields with `without`](#excluding-fields-with-without)
+* [Plain vs class instances](#plain-vs-class-instances)
+* [Error handling](#error-handling)
+* [API reference](#api-reference)
+
+---
+
+
+## Overview
+
+Decorated Factory combines **metadata decorators** with a **fluent builder** that creates objects _only when – and only as deep as – you request them_. It works with plain objects or class instances, supports complex relationships, and ships with helpers such as sequential IDs and UUIDs.
+
+Why you might like it:
+
+- **Static paths** - autocompletion for nested strings like `'photo.description'`.
+- **Lazy relations** - nested objects are populated only after you call `.with()`.
+- **Bring‑your‑own faker** - pass any `@faker-js/faker` instance & locale.
+- **Works everywhere** - unit tests, integration tests, database seeders.
+
+---
 
 ## Installation
-```bash
-npm i reflect-metadata
-npm i decorated-factory @faker-js/faker -d
+
+```shell
+npm i decorated-factory @faker-js/faker reflect-metadata -D
+```
+or
+```shell
+yarn add decorated-factory @faker-js/faker reflect-metadata --dev
 ```
 
-```bash
-yarn add decorated-factory @faker-js/faker --dev
-yarn add reflect-metadata
-```
 
-## Basic Usage
-Import reflect-metadata at the entry point of your application:
+---
 
-```typescript
+
+## Quick‑start
+
+```ts
 import 'reflect-metadata';
-// rest of your code...
-```
+import { fakerPT_BR } from '@faker-js/faker';
+import { Factory, FactoryValue } from 'decorated-factory';
 
-Define a class with the `@FactoryField` decorator to specify how to generate data:
+const factory = new Factory(fakerPT_BR);
 
-```typescript
-class Product {
-  @FactoryField((faker) => faker.number.int())
+class User {
+  @FactoryValue(faker => faker.number.int({ min: 1, max: 1000 }))
   id: number;
 
-  @FactoryField((faker) => faker.commerce.productName())
+  @FactoryValue(faker => faker.person.fullName())
   name: string;
 }
-```
-> Note: faker is only imported as a type in decorators, not in the production bundle.
 
-Create instances using the Factory:
-
-```typescript
-const factory = new Factory(faker);
-const product = factory.one(Product).make();
+const user = factory.one(User).make();
 ```
 
-## Relationships
+---
 
-Use `@FactoryRelationField` to define relationships between entities:
+## Core concepts
 
-```typescript
-class Review {
-  @FactoryField((faker) => faker.number.int())
+| Concept                               | Description                                                                                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@FactoryValue(fn, opts?)`            | Decorates a property with a _supplier function_ that receives `faker` and returns a value. Pass `{ isArray: true }` to mark the field as an **array of primitives**.                                |
+| `@FactoryType(() => T \| [T], opts?)` | Declares that a property is another entity (`T`) or an array of them (`[T]`). Supports ES primitives (`String`, `Number`, `Boolean`, `Date`) and **built‑in helpers** like `AutoIncrement`, `UUID`. |
+| `Factory.one(Type)`                   | Starts a **builder** for a _single_ instance.                                                                                                                                                       |
+| `Factory.many(Type)`                  | Starts a builder for an **array** (default length = 1).                                                                                                                                             |
+| `.with(amount?, path)`                | Opt‑in to populate a relation or array. For arrays pass a count: `.with(5, 'photos')`. Works recursively with dot‑notation (`'photos.upload'`).                                                     |
+| `.set(path, value)`                   | Overrides generated data – must be called _after_ any relevant `.with()`. Works on primitives, objects **and arrays**.                                                                              |
+| `.without(path)`                      | Removes a property from the output (after `.with()` if nested).                                                                                                                                     |
+| `.make(size?)`                        | Materialises the object(s) as **class instances**. For `many()` you can pass the final array size here.                                                                                             |
+| `.plain(size?)`                       | Like `.make()` but returns **plain objects** – handy for JSON payloads.                                                                                                                             |
+
+---
+
+## Built‑in JavaScript types
+
+Decorated Factory can generate sensible defaults for JavaScript primitives out of the box.
+
+```ts
+class Document {
+  @FactoryType(() => String)
+  title: string;
+
+  @FactoryType(() => Number)
+  version: number;
+
+  @FactoryType(() => Boolean)
+  isPublished: boolean;
+
+  @FactoryType(() => Date)
+  createdAt: Date;
+
+  @FactoryType(() => [String])
+  tags: string[];
+}
+
+const document = factory.one(Document).with(3, 'tags').make();
+```
+
+---
+
+## Built‑in helpers
+
+| Helper          | Produces                                            | Example                                |
+| --------------- | --------------------------------------------------- | -------------------------------------- |
+| `AutoIncrement` | Sequential integers starting at **1** (per builder) | `1, 2, 3…`                             |
+| `UUID`          | RFC‑4122 **v4** UUID strings                        | `d7f3e429‑9d5b‑42f9‑b7de‑8ba0e50bc9f6` |
+
+```ts
+class Task {
+  @FactoryType(() => AutoIncrement)
   id: number;
 
-  @FactoryField((faker) => faker.lorem.sentence())
-  content: string;
+  @FactoryType(() => UUID)
+  taskId: string;
 }
 
-class Product {
-  @FactoryRelationField(() => Review)
-  review: Review;
-}
+const task = factory.one(Task).make();
 ```
 
-Create an instance with the related entity:
+---
 
-```typescript
-const factory = new Factory(faker);
-const product = factory.one(Product).make({
-  review: true,
-});
-```
+## Generating instances
 
-## Key Binding
+### Declaring fields
 
-Key binding connects parent and child entities through related fields:
-
-```typescript
-class Chapter {
-  @FactoryField((faker) => faker.number.int())
+```ts
+class User {
+  @FactoryValue(faker => faker.number.int({ min: 1, max: 1000 }))
   id: number;
 
-  @FactoryField((faker) => faker.number.int())
-  bookId: number;
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
 }
 
-class Book {
-  @FactoryField((faker) => faker.number.int())
+const singleUser = factory.one(User).make();
+const fiveUsers = factory.many(User).make(5);
+```
+
+### Array fields of primitives
+
+```ts
+class User {
+  @FactoryValue(faker => faker.number.int({ min: 1, max: 1000 }))
   id: number;
 
-  @FactoryRelationField(() => Chapter, {
-    key: "id",
-    inverseKey: "bookId",
-  })
-  chapter: Chapter;
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryValue(faker => faker.lorem.word(), { isArray: true })
+  tags: string[];
 }
-```
 
-The parent's key automatically binds to the child's inverseKey:
-
-```typescript
-const factory = new Factory(faker);
-const book = factory.one(Book).make({ chapter: true });
-
-console.log(book.chapter.bookId === book.id); // true
-```
-
-## Arrays
-
-Create arrays of related entities:
-
-```typescript
-class Product {
-  @FactoryRelationField(() => [Review])
-  reviews: Review[];
-}
-```
-
-Specify the number of instances to create:
-
-```typescript
-const factory = new Factory(faker);
-const product = factory.one(Product).make({
-  reviews: [3], // Creates 3 reviews
-});
-```
-
-Or create a specific number:
-
-```typescript
-const factory = new Factory(faker);
-const product = factory.one(Product).make({
-  reviews: [1], // Creates 1 review
-});
-```
-
-## Creating Entities
-
-Create a single entity:
-
-```typescript
-const factory = new Factory(faker);
-const product = factory.one(Product).make();
-```
-
-Create multiple entities:
-
-```typescript
-const factory = new Factory(faker);
-const products = factory.many(Product, 5).make();
-```
-
-## Overriding Properties
-
-Override properties of a single entity:
-
-```typescript
-const product = factory.one(Product).override(instance => ({
-  name: 'Hello World'
-})).make();
-```
-
-Override properties of multiple entities:
-
-```typescript
-const products = factory.many(Product, 5).override(instances => 
-  instances.map(instance => ({ name: 'Product ' + instance.id }))
-).make();
-```
-
-Apply custom overrides to multiple entities:
-
-```typescript
-const amount = 3;
-const products = factory.many(Product, amount)
-  .override(instances => instances.map(instance => ({ name: 'Custom Name' })))
+const userWithFiveTags = factory
+  .one(User)
+  .with(5, 'tags')
   .make();
 ```
 
-## Partial Entities
+---
 
-Create entities with only specific fields:
+## Defining relationships
 
-```typescript
-// Single partial entity
-const user = factory.one(User).partial({
-  id: true,
-  firstName: true,
-}).make();
+### One‑to‑one
 
-// Multiple partial entities
-const users = factory.many(User, 3).partial({
-  id: true,
-  firstName: true,
-}).make();
-```
-
-Chain partial with override:
-
-```typescript
-const user = factory.one(User)
-  .partial({
-    id: true,
-    firstName: true,
-  })
-  .override(() => ({
-    firstName: 'Custom Name',
-  }))
-  .make();
-```
-
-## Partial with Relations
-
-Include specific fields from related entities:
-
-```typescript
+```ts
 class Photo {
-  @FactoryField((faker) => faker.number.int())
-  id: number;
-
-  @FactoryField((faker) => faker.image.url())
+  @FactoryValue(faker => faker.image.url())
   url: string;
-
-  @FactoryField((faker) => faker.lorem.sentence())
-  description: string;
 }
 
 class User {
-  @FactoryField((faker) => faker.number.int())
+  @FactoryType(() => AutoIncrement)
   id: number;
 
-  @FactoryField((faker) => faker.person.fullName())
+  @FactoryValue(faker => faker.person.fullName())
   name: string;
 
-  @FactoryRelationField(() => Photo)
+  @FactoryType(() => Photo)
   photo: Photo;
 }
 
-// Create a user with only id and name, and a photo with only id and url
-const user = factory.one(User).partial({
-  id: true,
-  name: true,
-  photo: {
-    id: true,
-    url: true,
-  },
-}).make();
+const user = factory.one(User).with('photo').make();
 ```
 
-## Partial with Array Relations
+### One‑to‑many
 
-Specify the number of array items and their fields:
+```ts
+class Photo {
+  @FactoryValue(faker => faker.image.url())
+  url: string;
+}
 
-```typescript
 class User {
-  @FactoryField((faker) => faker.number.int())
+  @FactoryType(() => AutoIncrement)
   id: number;
 
-  @FactoryRelationField(() => [Photo])
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryType(() => [Photo])
   photos: Photo[];
 }
 
-// Create a user with one photo that has only id and url
-const user = factory.one(User).partial({
-  id: true,
-  photos: [
-    1, // Create 1 photo
-    {
-      id: true,
-      url: true,
-    },
-  ],
-}).make();
+const gallery = factory.one(User).with(5, 'photos').make();
 ```
 
-## Key Binding in Partial Entities
+---
 
-When using partial with key binding, relationship fields are always included:
+## Nested graphs & circular refs
 
-```typescript
-class Comment {
-  @FactoryField((faker) => faker.number.int())
-  id: number;
-
-  @FactoryField((faker) => faker.lorem.sentence())
-  text: string;
-
-  @FactoryField((faker) => faker.number.int())
-  photoId: number; // Will be included automatically
+```ts
+class Upload {
+  @FactoryValue(faker => faker.image.url())
+  url: string;
 }
 
 class Photo {
-  @FactoryField((faker) => faker.number.int())
-  id: number;
+  @FactoryValue(faker => faker.lorem.sentence())
+  description: string;
 
-  @FactoryField((faker) => faker.image.url())
-  url: string;
-
-  @FactoryField((faker) => faker.number.int())
-  userId: number; // Will be included automatically
-
-  @FactoryRelationField(() => [Comment], { key: "id", inverseKey: "photoId" })
-  comments: Comment[];
+  @FactoryType(() => Upload)
+  upload: Upload;
 }
 
 class User {
-  @FactoryField((faker) => faker.number.int())
+  @FactoryType(() => AutoIncrement)
   id: number;
 
-  @FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryType(() => [Photo])
   photos: Photo[];
 }
 
-// Even though we only request specific fields, relationship fields are included
-const partialUser = factory.one(User).partial({
-  id: true,
-  photos: [
-    1,
-    {
-      id: true,
-      url: true,
-      comments: [
-        2,
-        {
-          id: true,
-          text: true,
-        },
-      ],
-    },
-  ],
-}).make();
+const complexUser = factory
+  .one(User)
+  .with(3, 'photos')
+  .with('photos.upload')
+  .make();
 ```
 
-Example output:
-```json
-{
-  "id": 1,
-  "photos": [
-    {
-      "id": 2,
-      "url": "https://picsum.photos/seed/7ggB4tRnW/640/480",
-      "comments": [
-        {
-          "id": 3,
-          "text": "Degusto suffragium admoneo comminor quis suus urbs.",
-          "photoId": 2 // Included automatically
-        },
-        {
-          "id": 4,
-          "text": "Depromo cura molestias accusamus utrum delibero cum voco deserunt ipsum.",
-          "photoId": 2 // Included automatically
-        }
-      ],
-      "userId": 1 // Included automatically
-    }
-  ]
+```ts
+class Tag {
+  @FactoryValue(faker => faker.word.noun())
+  name: string;
 }
+
+class Photo {
+  @FactoryValue(faker => faker.image.url())
+  url: string;
+
+  @FactoryType(() => [Tag])
+  tags: Tag[];
+}
+
+class User {
+  @FactoryType(() => AutoIncrement)
+  id: number;
+
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryType(() => [Photo])
+  photos: Photo[];
+}
+
+const userWithTaggedPhotos = factory
+  .one(User)
+  .with(4, 'photos')
+  .with(2, 'photos.tags')
+  .make();
 ```
 
-## Deprecated Methods
+### Explicit circular reference
 
-Methods to be removed in the next major release:
+```ts
+class User {
+  @FactoryType(() => AutoIncrement)
+  id: number;
 
-- `new(entity, select?)` → Use `factory.one(entity).make()`
-- `newList(entity, amount, select?)` → Use `factory.many(entity, amount).make()`
-- `create(entity, select?)` → Use `factory.one(entity).override().make()`
-- `createList(entity, amount, select?)` → Use `factory.many(entity, amount).override().make()`
-- `partial(entity, select)` → Use `factory.one(entity).partial(select).make()` or `factory.many(entity, amount).partial(select).make()`
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryType(() => Photo)
+  photo: Photo;
+}
+
+class Photo {
+  @FactoryType(() => AutoIncrement)
+  id: number;
+
+  @FactoryValue(faker => faker.image.url())
+  url: string;
+
+  @FactoryType(() => User)
+  user: User;
+}
+
+const circular = factory
+  .one(User)
+  .with('photo')
+  .with('photo.user')
+  .make();
+```
+
+---
+
+## Key binding (foreign keys)
+
+```ts
+class Photo {
+  @FactoryValue(faker => faker.image.url())
+  url: string;
+
+  userId: number; // copied from parent User.id
+}
+
+class User {
+  @FactoryType(() => AutoIncrement)
+  id: number;
+
+  @FactoryValue(faker => faker.person.fullName())
+  name: string;
+
+  @FactoryType(() => [Photo], { key: 'id', inverseKey: 'userId' })
+  photos: Photo[];
+}
+
+const userWithPhotos = factory.one(User).with(5, 'photos').make();
+```
+
+Rules:
+
+1. `key` must exist on the parent.
+2. `inverseKey` must exist on the child.
+3. Works for one‑to‑one **and** one‑to‑many.
+
+
+---
+
+## Arrays & amounts
+
+|Call| Behaviour                                                       |
+|---|-----------------------------------------------------------------|
+|`.with(0, 'tags')`| Creates an **empty** array.                                     |
+|`.with(-1, 'tags')`| **Throws** – amounts must be ≥ 0.                              |
+|`.many(Type).make(n)`| Generates `n` root objects. `0` → `[]`; negative numbers throw. |
+
+```ts
+const emptyPhotosUser = factory.one(User).with(0, 'photos').make();
+```
+
+---
+
+## Overriding values with `set`
+
+```ts
+const namedUser = factory.one(User)
+  .set('name', 'John Doe')
+  .make();
+```
+
+### Nested & array overrides
+
+```ts
+const modifiedDescriptions = factory.one(User)
+  .with(5, 'photos')
+  .set('photos.description', 'Same description for all photos')
+  .make();
+```
+
+> Overriding a nested path without first requesting its parent relation throws an error to preventing silent mistakes.
+
+---
+
+## Excluding fields with `without`
+
+```ts
+const anonymousUser = factory
+  .one(User)
+  .without('name')
+  .make();
+```
+
+### Excluding inside a relation
+
+```ts
+const userWithoutPhotoText = factory
+  .one(User)
+  .with('photo')
+  .without('photo.description')
+  .make();
+```
+
+---
+
+## Plain vs class instances
+
+`.make()` returns **class instances**; `.plain()` returns **plain objects** – perfect for HTTP payloads:
+
+```ts
+const payload = factory
+  .one(User)
+  .with(2, 'photos')
+  .plain();
+```
+
+---
+
+## Error handling
+
+Decorated Factory fails fast with clear errors when you:
+
+- Supply a negative amount to `.with()` or `.many().make()`.
+- Call `set()` for a nested path without its parent `.with()`.
+- Try to generate an **array** of `AutoIncrement` values (unsupported by design).
+
+
+---
+
+## API reference
+
+```
+Factory.one(Type)  // builder for one
+Factory.many(Type) // builder for many
+  .with(amount?, path)   // opt-in relations (any depth)
+  .set(path, value)      // overrides (optional)
+  .without(path)         // exclusions (optional)
+  .make(size?) | .plain(size?)
+```

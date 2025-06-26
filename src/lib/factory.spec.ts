@@ -1,1534 +1,1070 @@
 import "reflect-metadata";
-import { faker } from "@faker-js/faker";
-import { FactoryField, FactoryRelationField } from "../decorators";
+import { fakerPT_BR } from "@faker-js/faker";
+import { validate, version } from "uuid";
+import { FactoryType, FactoryValue } from "../decorators";
+import { AutoIncrement, UUID } from "./built-in-types";
 import { Factory } from "./factory";
-import { Overridable } from "./overridable";
 
 describe("Factory tests", () => {
-	it("should create an entity", () => {
-		class Cat {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
+	const factory = new Factory(fakerPT_BR);
 
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-
-		const cat = factory.new(Cat);
-		expect(cat).toBeInstanceOf(Cat);
-		expect(typeof cat.id).toBe("number");
-		expect(typeof cat.name).toBe("string");
-	});
-
-	it("should create an entity with override", () => {
-		const catId = 1;
-		class Cat {
-			@FactoryField(() => catId)
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory.create(Cat).override(() => ({ name: "Hello World" }));
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(cat.name).toBe("Hello World");
-		expect(cat.id).toBe(catId);
-	});
-
-	it("should inject faker instance", () => {
-		const factory = new Factory(faker);
-		expect(factory).toHaveProperty("faker");
-	});
-
-	it("should create an entity with relation", () => {
-		class Dog {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		class Cat {
-			@FactoryRelationField(() => Dog)
-			field: Dog;
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory.new(Cat, {
-			field: true,
-		});
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(cat.field).toBeInstanceOf(Dog);
-	});
-
-	it("should create an entity with relation array", () => {
-		class Dog {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		class Cat {
-			@FactoryRelationField(() => [Dog])
-			field: Dog[];
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory.new(Cat, {
-			field: [1],
-		});
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(Array.isArray(cat.field)).toBeTruthy();
-		expect(cat.field[0]).toBeInstanceOf(Dog);
-	});
-
-	it("should create an entity with relation array with override", () => {
-		class Dog {
-			@FactoryField((faker) => faker.number.int({ min: 999, max: 999999 }))
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		class Cat {
-			@FactoryRelationField(() => [Dog])
-			field: Dog[];
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory
-			.create(Cat, {
-				field: [1],
-			})
-			.override(() => ({
-				field: [{ name: "Hello World" }],
-			}));
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(Array.isArray(cat.field)).toBeTruthy();
-		expect(cat.field[0]).toBeInstanceOf(Dog);
-		expect(cat.field[0].name).toBe("Hello World");
-	});
-
-	it("should replace a value to null", () => {
-		class Cat {
-			@FactoryField(() => 1)
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-
-		const cat = factory.create(Cat).override(() => ({
-			name: null,
-		}));
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(cat.name).toBeNull();
-	});
-
-	it("should create an entity with relation and replace relation value to null", () => {
-		class Dog {
-			@FactoryField((faker) => faker.number.int({ min: 999, max: 999999 }))
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		class Cat {
-			@FactoryRelationField(() => [Dog])
-			field: Dog[];
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory
-			.create(Cat, {
-				field: [1],
-			})
-			.override(() => ({
-				field: [{ name: null }],
-			}));
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(Array.isArray(cat.field)).toBeTruthy();
-		expect(cat.field[0]).toBeInstanceOf(Dog);
-		expect(cat.field[0].name).toBeNull();
-	});
-
-	it("should instantiate a list of entities", () => {
-		class Cat {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-		const amount = 3;
-		const cats = factory.newList(Cat, amount);
-		expect(cats).toHaveLength(amount);
-	});
-
-	it("should create list of overridable entities", () => {
-		class Cat {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-		const amount = 3;
-		const overridable = factory.createList(Cat, amount);
-		expect(overridable).toBeInstanceOf(Overridable);
-	});
-
-	it("should return the instance", () => {
-		class Cat {
-			id: number;
-			name: string;
-		}
-
-		const catInstance = new Cat();
-		catInstance.id = 1;
-		catInstance.name = "Test Name";
-
-		const overridable = new Overridable(catInstance);
-		const instance = overridable.getInstance();
-
-		expect(instance).toBe(catInstance);
-		expect(instance.id).toBe(1);
-		expect(instance.name).toBe("Test Name");
-	});
-
-	it("should override a field to null", () => {
-		class Cat {
-			@FactoryField(() => 1)
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-			name: string;
-		}
-
-		const factory = new Factory(faker);
-		const cat = factory.create(Cat).override(() => ({
-			name: null,
-		}));
-
-		expect(cat).toBeInstanceOf(Cat);
-		expect(cat.name).toBeNull();
-	});
-
-	it("should correctly bind ids in basic nested relations", () => {
-		class Comment {
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-		}
-
-		class Post {
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			title: string;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-			comments: Comment[];
-		}
-
-		class Category {
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.word())
-			name: string;
-		}
-
-		class CategoryPost {
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			id: number;
-
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			postId: number;
-
-			@FactoryField((faker) => faker.number.int({ min: 1, max: 100000 }))
-			categoryId: number;
-
-			@FactoryRelationField(() => Category, { key: "categoryId", inverseKey: "id" })
-			category: Category;
-
-			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
-			post: Post;
-		}
-
-		const factory = new Factory(faker);
-
-		const categoryPosts = factory.newList(CategoryPost, 3, {
-			category: true,
-			post: {
-				comments: [3],
-			},
-		});
-
-		expect(categoryPosts).toHaveLength(3);
-
-		for (const categoryPost of categoryPosts) {
-			expect(categoryPost.category.id).toBe(categoryPost.categoryId);
-			expect(categoryPost.post.id).toBe(categoryPost.postId);
-
-			for (const comment of categoryPost.post.comments) {
-				expect(comment.postId).toBe(categoryPost.post.id);
-			}
-		}
-	});
-
-	it("should maintain consistency when overriding nested fields", () => {
-		class Comment {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-		}
-
-		class Post {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			title: string;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-			comments: Comment[];
-		}
-
-		class CategoryPost {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-
-			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
-			post: Post;
-		}
-
-		const factory = new Factory(faker);
-
-		const categoryPost = factory
-			.create(CategoryPost, {
-				post: {
-					comments: [2],
-				},
-			})
-			.override(() => ({
-				post: {
-					title: "Custom Post Title",
-					comments: [{ text: "Custom Comment" }],
-				},
-			}));
-
-		expect(categoryPost.post.title).toBe("Custom Post Title");
-		expect(categoryPost.post.id).toBe(categoryPost.postId);
-		expect(categoryPost.post.comments[0].text).toBe("Custom Comment");
-		expect(categoryPost.post.comments[0].postId).toBe(categoryPost.post.id);
-	});
-
-	it("should handle deeply nested relations", () => {
-		class Tag {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.number.int())
-			commentId: number;
-
-			@FactoryField((faker) => faker.lorem.word())
-			name: string;
-		}
-
-		class Comment {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-
-			@FactoryRelationField(() => [Tag], { key: "id", inverseKey: "commentId" })
-			tags: Tag[];
-		}
-
-		class Post {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			title: string;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-			comments: Comment[];
-		}
-
-		class CategoryPost {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-
-			@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
-			post: Post;
-		}
-
-		const factory = new Factory(faker);
-
-		const instance = factory.new(CategoryPost, {
-			post: {
-				comments: [
-					2,
-					{
-						tags: [2],
-					},
-				],
-			},
-		});
-
-		expect(instance.post.id).toBe(instance.postId);
-		for (const comment of instance.post.comments) {
-			expect(comment.postId).toBe(instance.post.id);
-			if (comment.tags) {
-				for (const tag of comment.tags) {
-					expect(tag.commentId).toBe(comment.id);
-				}
-			}
-		}
-	});
-
-	it("should handle array-only nested relations", () => {
-		class Comment {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-		}
-
-		class Post {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-			comments: Comment[];
-		}
-
-		const factory = new Factory(faker);
-
-		const post = factory.new(Post, {
-			comments: [5],
-		});
-
-		expect(post.comments).toHaveLength(5);
-		for (const comment of post.comments) {
-			expect(comment.postId).toBe(post.id);
-		}
-	});
-
-	it("should handle multiple independent relations", () => {
-		class Author {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-		}
-
-		class Comment {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
-		}
-
-		class Post {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-			comments: Comment[];
-
-			@FactoryRelationField(() => [Author], { key: "id", inverseKey: "postId" })
-			authors: Author[];
-		}
-
-		const factory = new Factory(faker);
-		const post = factory.new(Post, {
-			comments: [2],
-			authors: [3],
-		});
-
-		expect(post.comments).toHaveLength(2);
-		expect(post.authors).toHaveLength(3);
-
-		for (const comment of post.comments) {
-			expect(comment.postId).toBe(post.id);
-		}
-
-		for (const author of post.authors) {
-			expect(author.postId).toBe(post.id);
-		}
-	});
-
-	it("should create a partial entity with only selected fields", () => {
+	it("should create an entity instance", () => {
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.firstName())
-			firstName: string;
-
-			@FactoryField((faker) => faker.person.lastName())
-			lastName: string;
-
-			@FactoryField((faker) => faker.internet.email())
-			email: string;
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {
-			id: true,
-			firstName: true,
-		});
+		const user = factory.one(User).make();
 
-		expect(partialUser).toHaveProperty("id");
-		expect(partialUser).toHaveProperty("firstName");
-		expect(partialUser).not.toHaveProperty("lastName");
-		expect(partialUser).not.toHaveProperty("email");
-		expect(typeof partialUser.id).toBe("number");
-		expect(typeof partialUser.firstName).toBe("string");
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.name).toBeTypeOf("string");
 	});
 
-	it("should create a partial entity with relations", () => {
-		class Photo {
-			@FactoryField((faker) => faker.number.int())
+	it("should create a plain object", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.image.url())
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+		}
+
+		const user = factory.one(User).plain();
+
+		expect(user).toBeInstanceOf(Object);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.name).toBeTypeOf("string");
+	});
+
+	it("should create an entity with a one-to-one relation", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
 			url: string;
 
-			@FactoryField((faker) => faker.lorem.sentence())
+			@FactoryValue((faker) => faker.lorem.sentence())
 			description: string;
-
-			@FactoryField((faker) => faker.number.int())
-			userId: number;
 		}
 
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
+			@FactoryValue((faker) => faker.person.fullName())
 			name: string;
 
-			@FactoryRelationField(() => Photo, { key: "id", inverseKey: "userId" })
+			@FactoryType(() => Photo)
 			photo: Photo;
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {
-			id: true,
-			name: true,
-			photo: {
-				id: true,
-				url: true,
-			},
-		});
+		const user = factory.one(User).with("photo").make();
 
-		expect(partialUser).toHaveProperty("id");
-		expect(partialUser).toHaveProperty("name");
-		expect(partialUser).toHaveProperty("photo");
-		expect(partialUser.photo).toHaveProperty("id");
-		expect(partialUser.photo).toHaveProperty("url");
-		expect(partialUser.photo).not.toHaveProperty("description");
-		expect(typeof partialUser.id).toBe("number");
-		expect(typeof partialUser.name).toBe("string");
-		expect(typeof partialUser.photo.id).toBe("number");
-		expect(typeof partialUser.photo.url).toBe("string");
-		expect(partialUser.photo.userId).toBe(partialUser.id);
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
 	});
 
-	it("should create a partial entity with array relations", () => {
-		class Photo {
-			@FactoryField((faker) => faker.number.int())
+	it("should create an entity with a nested one-to-one relation", () => {
+		class Upload {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.image.url())
+			@FactoryValue((faker) => faker.image.url())
 			url: string;
+		}
 
-			@FactoryField((faker) => faker.lorem.sentence())
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
 			description: string;
 
-			@FactoryField((faker) => faker.number.int())
+			@FactoryType(() => Upload)
+			upload: Upload;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		// Should create a single user with a photo with an upload
+		const user = factory.one(User).with("photo.upload").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
+		expect(user.photo.upload).toBeInstanceOf(Upload);
+	});
+
+	it("should create an entity with a one-to-many relation", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => [Photo])
+			photos: Photo[];
+		}
+
+		// Should create a single user with 5 photos
+		const user = factory.one(User).with(5, "photos").make();
+
+		expect(user).toBeInstanceOf(User);
+		for (const photo of user.photos) {
+			expect(photo).toBeInstanceOf(Photo);
+		}
+	});
+
+	it("should create an entity with nested one-to-many relations", () => {
+		class Tag {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.word.noun())
+			name: string;
+		}
+
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryType(() => [Tag])
+			tags: Tag[];
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => [Photo])
+			photos: Photo[];
+		}
+
+		// Should create a single user with 5 photos with 3 tags each photo
+		const user = factory.one(User).with(5, "photos").with(3, "photos.tags").make();
+
+		expect(user).toBeInstanceOf(User);
+
+		for (const photo of user.photos) {
+			expect(photo).toBeInstanceOf(Photo);
+			expect(photo.tags.length).toBe(3);
+			for (const tag of photo.tags) {
+				expect(tag).toBeInstanceOf(Tag);
+			}
+		}
+	});
+
+	it("should exclude a single field from the entity", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+		}
+
+		// Should create a single user without a "name" field
+		const user = factory.one(User).without("name").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.name).toBeUndefined();
+	});
+
+	it("should exclude a field from a nested relation", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		// Should create a single user with a photo, but without the photo's description
+		const user = factory.one(User).with("photo").without("photo.description").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
+		expect(user.photo.id).toBeTypeOf("number");
+		expect(user.photo.url).toBeTypeOf("string");
+		expect(user.photo.description).toBeUndefined();
+	});
+
+	it("should exclude a field from a nested array relation", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => [Photo])
+			photos: Photo[];
+		}
+
+		// Should create a single user with 5 photos, but without the photo's description
+		const user = factory.one(User).with(5, "photos").without("photos.description").make();
+
+		expect(user).toBeInstanceOf(User);
+
+		for (const photo of user.photos) {
+			expect(photo).toBeInstanceOf(Photo);
+			expect(photo.id).toBeTypeOf("number");
+			expect(photo.url).toBeTypeOf("string");
+			expect(photo.description).toBeUndefined();
+		}
+	});
+
+	it("should create an entity with a one-to-one relation using key binding", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			userId: number;
 		}
 
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
+			@FactoryValue((faker) => faker.person.fullName())
 			name: string;
 
-			@FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
-			photos: Photo[];
+			@FactoryType(() => Photo, { key: "id", inverseKey: "userId" })
+			photo: Photo;
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {
-			id: true,
-			name: true,
-			photos: [
-				1,
-				{
-					id: true,
-					url: true,
-				},
-			],
-		});
+		// Should create a single user with a photo, where the photo's userId is bound to the user's id
+		const user = factory.one(User).with("photo").make();
 
-		expect(partialUser).toHaveProperty("id");
-		expect(partialUser).toHaveProperty("name");
-		expect(partialUser).toHaveProperty("photos");
-		expect(Array.isArray(partialUser.photos)).toBeTruthy();
-		expect(partialUser.photos).toHaveLength(1);
-		expect(partialUser.photos[0]).toHaveProperty("id");
-		expect(partialUser.photos[0]).toHaveProperty("url");
-		expect(partialUser.photos[0]).not.toHaveProperty("description");
-		expect(typeof partialUser.id).toBe("number");
-		expect(typeof partialUser.name).toBe("string");
-		expect(typeof partialUser.photos[0].id).toBe("number");
-		expect(typeof partialUser.photos[0].url).toBe("string");
-		expect(partialUser.photos[0].userId).toBe(partialUser.id);
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
+		expect(user.photo.userId).toBe(user.id);
 	});
 
-	it("should handle nested relations in partial entities", () => {
-		class Comment {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			photoId: number;
-		}
-
+	it("should create an entity with a one-to-many relation using key binding", () => {
 		class Photo {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.image.url())
+			@FactoryValue((faker) => faker.image.url())
 			url: string;
 
-			@FactoryField((faker) => faker.lorem.sentence())
+			@FactoryValue((faker) => faker.lorem.sentence())
 			description: string;
 
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			userId: number;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "photoId" })
-			comments: Comment[];
 		}
 
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
+			@FactoryValue((faker) => faker.person.fullName())
 			name: string;
 
-			@FactoryRelationField(() => [Photo], { key: "id", inverseKey: "userId" })
+			@FactoryType(() => [Photo], { key: "id", inverseKey: "userId" })
 			photos: Photo[];
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {
-			id: true,
-			photos: [
-				1,
-				{
-					id: true,
-					url: true,
-					comments: [
-						2,
-						{
-							id: true,
-							text: true,
-						},
-					],
-				},
-			],
-		});
+		// Should create a single user with 5 photos, where the photo's userId is bound to the user's id
+		const user = factory.one(User).with(5, "photos").make();
 
-		expect(partialUser).toHaveProperty("id");
-		expect(partialUser).not.toHaveProperty("name");
-		expect(partialUser).toHaveProperty("photos");
-		expect(partialUser.photos).toHaveLength(1);
-		expect(partialUser.photos[0]).toHaveProperty("id");
-		expect(partialUser.photos[0]).toHaveProperty("url");
-		expect(partialUser.photos[0]).not.toHaveProperty("description");
-		expect(partialUser.photos[0]).toHaveProperty("comments");
-		expect(partialUser.photos[0].comments).toHaveLength(2);
-		expect(partialUser.photos[0].comments[0]).toHaveProperty("id");
-		expect(partialUser.photos[0].comments[0]).toHaveProperty("text");
-		expect(partialUser.photos[0].userId).toBe(partialUser.id);
-		expect(partialUser.photos[0].comments[0].photoId).toBe(partialUser.photos[0].id);
+		expect(user).toBeInstanceOf(User);
+		for (const photo of user.photos) {
+			expect(photo).toBeInstanceOf(Photo);
+			expect(photo.userId).toBe(user.id);
+		}
 	});
 
-	it("should handle empty selection object", () => {
+	it("should handle circular references while building entities", () => {
+		class Photo {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+
+			@FactoryType(() => User)
+			user: User;
+		}
+
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryType(() => AutoIncrement)
 			id: number;
 
-			@FactoryField((faker) => faker.person.firstName())
-			firstName: string;
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {});
+		// should create a single user with a photo with a user
+		const user = factory.one(User).with("photo").with("photo.user").make();
 
-		expect(partialUser).not.toHaveProperty("id");
-		expect(partialUser).not.toHaveProperty("firstName");
-		expect(Object.keys(partialUser).length).toBe(0);
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
+		expect(user.photo.user).toBeInstanceOf(User);
 	});
 
-	it("should ignore non-existent fields in selection", () => {
+	it("should create an entity with an array of primitive values", () => {
 		class User {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.firstName())
-			firstName: string;
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryValue((faker) => faker.lorem.word())
+			tags: string[];
 		}
 
-		const factory = new Factory(faker);
-		const partialUser = factory.partial(User, {
-			id: true,
-			nonExistentField: true,
-		} as any);
+		// set the number of tags to 5
+		const user = factory.one(User).with(5, "tags").make();
 
-		expect(partialUser).toHaveProperty("id");
-		expect(partialUser).not.toHaveProperty("firstName");
-		expect(partialUser).not.toHaveProperty("nonExistentField");
-		expect(Object.keys(partialUser).length).toBe(1);
+		expect(user).toBeInstanceOf(User);
+		expect(user.tags).toBeInstanceOf(Array);
+		expect(user.tags.length).toBe(5);
+		for (const tag of user.tags) {
+			expect(tag).toBeTypeOf("string");
+		}
 	});
 
-	it("should handle circular references in relations", () => {
-		class Parent {
-			@FactoryField((faker) => faker.number.int())
+	it("should override a single field value", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
+			@FactoryValue((faker) => faker.person.fullName())
 			name: string;
-
-			@FactoryRelationField(() => Child, { key: "id", inverseKey: "parentId" })
-			child: Child;
 		}
 
-		class Child {
-			@FactoryField((faker) => faker.number.int())
+		// Should create a single user with an overridden field "name" to "John Doe"
+		const user = factory.one(User).set("name", "John Doe").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.name).toBe("John Doe");
+	});
+
+	it("should override a nested field value", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
-			name: string;
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
 
-			@FactoryField((faker) => faker.number.int())
-			parentId: number;
-
-			@FactoryRelationField(() => Parent, { key: "parentId", inverseKey: "id" })
-			parent: Parent;
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
 		}
 
-		const factory = new Factory(faker);
-		const partialParent = factory.partial(Parent, {
-			id: true,
-			name: true,
-			child: {
-				id: true,
-				name: true,
-			},
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		// Should create a single user with an overridden field "photo.description" to "A beautiful photo"
+		const user = factory.one(User).with("photo").set("photo.description", "A beautiful photo").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.photo.description).toBe("A beautiful photo");
+	});
+
+	it("should not override a nested field when the relation is undefined", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		try {
+			factory.one(User).set("photo.description", "A beautiful photo").make();
+			expect.fail("Expected an error to be thrown");
+		} catch (error) {
+			expect(error).toBeInstanceOf(Error);
+		}
+	});
+
+	it("should create multiple entities", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+		}
+
+		// Should create an array with 5 users
+		const users = factory.many(User).make(5);
+
+		expect(users).toBeInstanceOf(Array);
+		expect(users.length).toBe(5);
+		for (const user of users) {
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBeTypeOf("number");
+			expect(user.name).toBeTypeOf("string");
+		}
+	});
+
+	it("should create a default-size array of entities", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+		}
+
+		// Should create an array with 1 user
+		const users = factory.many(User).make(1);
+
+		expect(users).toBeInstanceOf(Array);
+		expect(users.length).toBe(1);
+		for (const user of users) {
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBeTypeOf("number");
+			expect(user.name).toBeTypeOf("string");
+		}
+	});
+
+	it("should create multiple entities each with a relation", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		const amount = 5;
+
+		// Should create an array with 5 users
+		const users = factory.many(User).with("photo").make(amount);
+
+		expect(users).toBeInstanceOf(Array);
+		expect(users.length).toBe(amount);
+		for (const user of users) {
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBeTypeOf("number");
+			expect(user.name).toBeTypeOf("string");
+
+			expect(user.photo).toBeInstanceOf(Photo);
+			expect(user.photo.id).toBeTypeOf("number");
+			expect(user.photo.url).toBeTypeOf("string");
+			expect(user.photo.description).toBeTypeOf("string");
+		}
+	});
+
+	it("should create multiple entities with relations using key binding", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+
+			@FactoryValue((faker) => faker.lorem.sentence())
+			description: string;
+
+			userId: number;
+		}
+
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryType(() => Photo, { key: "id", inverseKey: "userId" })
+			photo: Photo;
+		}
+
+		const amount = 5;
+
+		// Should create an array with 5 users with key bindings
+		const users = factory.many(User).with("photo").make(amount);
+
+		expect(users).toBeInstanceOf(Array);
+		expect(users.length).toBe(amount);
+
+		for (const user of users) {
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBeTypeOf("number");
+			expect(user.name).toBeTypeOf("string");
+
+			expect(user.photo).toBeInstanceOf(Photo);
+			expect(user.photo.id).toBeTypeOf("number");
+			expect(user.photo.url).toBeTypeOf("string");
+			expect(user.photo.description).toBeTypeOf("string");
+
+			expect(user.photo.userId).toBe(user.id);
+		}
+	});
+
+	it("should create an entity with implicitly nested relations", () => {
+		class Upload {}
+
+		class Photo {
+			@FactoryType(() => Upload)
+			upload: Upload;
+		}
+
+		class User {
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		const user = factory.one(User).with("photo.upload").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeInstanceOf(Photo);
+		expect(user.photo.upload).toBeInstanceOf(Upload);
+	});
+
+	it("should create an entity with an array field of defined length via isArray", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryValue((faker) => faker.lorem.word(), { isArray: true })
+			tags: string[];
+		}
+
+		const user = factory.one(User).with(5, "tags").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.tags).toBeInstanceOf(Array);
+		expect(user.tags.length).toBe(5);
+		for (const tag of user.tags) {
+			expect(tag).toBeTypeOf("string");
+		}
+	});
+
+	it("should create an entity with an array field of default length via isArray", () => {
+		class User {
+			@FactoryValue((faker) => faker.number.int({ min: 1, max: 1000 }))
+			id: number;
+
+			@FactoryValue((faker) => faker.person.fullName())
+			name: string;
+
+			@FactoryValue((faker) => faker.lorem.word(), { isArray: true })
+			tags: string[];
+		}
+
+		const user = factory.one(User).make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.tags).toBeInstanceOf(Array);
+		expect(user.tags.length).toBe(1);
+		expect(user.tags[0]).toBeTypeOf("string");
+	});
+
+	it("should create an entity with built-in type fields", () => {
+		class User {
+			@FactoryType(() => Number)
+			id: number;
+
+			@FactoryType(() => String)
+			name: string;
+
+			@FactoryType(() => Boolean)
+			isActive: boolean;
+
+			@FactoryType(() => Date)
+			createdAt: Date;
+		}
+
+		const user = factory.one(User).make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBeTypeOf("number");
+		expect(user.name).toBeTypeOf("string");
+		expect(user.isActive).toBeTypeOf("boolean");
+		expect(user.createdAt).toBeInstanceOf(Date);
+	});
+
+	it("should generate a random uuid using built-in-types", () => {
+		class User {
+			@FactoryType(() => UUID)
+			id: string;
+		}
+
+		const user = factory.one(User).make();
+
+		expect(user).toBeInstanceOf(User);
+		const isUUIDv4 = validate(user.id) && version(user.id) === 4;
+
+		expect(isUUIDv4).toBe(true);
+	});
+
+	it("should generate auto generated int values for a single instance", () => {
+		class User {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		const user = factory.one(User).make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.id).toBe(1);
+	});
+
+	it("should generate auto generated int values for a multiple instances", () => {
+		class User {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		const amount = 5;
+		const users = factory.many(User).make(amount);
+
+		users.forEach((user, index) => {
+			const id = index + 1;
+
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBe(id);
 		});
-
-		expect(partialParent).toHaveProperty("id");
-		expect(partialParent).toHaveProperty("name");
-		expect(partialParent).toHaveProperty("child");
-		expect(partialParent.child).toHaveProperty("id");
-		expect(partialParent.child).toHaveProperty("name");
-		expect(partialParent.child).not.toHaveProperty("parent");
-		expect(partialParent.child.parentId).toBe(partialParent.id);
 	});
 
-	it("should handle complex nested structures with multiple levels", () => {
-		class GrandChild {
-			@FactoryField((faker) => faker.number.int())
+	it("should generate auto generated int values for nested relations", () => {
+		class Photo {
+			@FactoryType(() => AutoIncrement)
 			id: number;
-
-			@FactoryField((faker) => faker.person.fullName())
-			name: string;
-
-			@FactoryField((faker) => faker.number.int())
-			childId: number;
 		}
 
-		class Child {
-			@FactoryField((faker) => faker.number.int())
+		class User {
+			@FactoryType(() => AutoIncrement)
 			id: number;
 
-			@FactoryField((faker) => faker.person.fullName())
-			name: string;
-
-			@FactoryField((faker) => faker.number.int())
-			parentId: number;
-
-			@FactoryRelationField(() => [GrandChild], { key: "id", inverseKey: "childId" })
-			grandChildren: GrandChild[];
+			@FactoryType(() => [Photo])
+			photos: Photo[];
 		}
 
-		class Parent {
-			@FactoryField((faker) => faker.number.int())
-			id: number;
+		const amountOfUsers = 5;
+		const amountOfPhotos = 3;
+		const users = factory.many(User).with(amountOfPhotos, "photos").make(amountOfUsers);
 
-			@FactoryField((faker) => faker.person.fullName())
-			name: string;
+		users.forEach((user, index) => {
+			const id = index + 1;
 
-			@FactoryRelationField(() => [Child], { key: "id", inverseKey: "parentId" })
-			children: Child[];
-		}
+			expect(user).toBeInstanceOf(User);
+			expect(user.id).toBe(id);
 
-		const factory = new Factory(faker);
-		const partialParent = factory.partial(Parent, {
-			id: true,
-			name: true,
-			children: [
-				2,
-				{
-					id: true,
-					name: true,
-					grandChildren: [
-						3,
-						{
-							id: true,
-							name: true,
-						},
-					],
-				},
-			],
+			user.photos.forEach((photo, photoIndex) => {
+				const photoId = photoIndex + 1;
+
+				expect(photo).toBeInstanceOf(Photo);
+				expect(photo.id).toBe(photoId);
+			});
 		});
-
-		expect(partialParent).toHaveProperty("id");
-		expect(partialParent).toHaveProperty("name");
-		expect(partialParent).toHaveProperty("children");
-		expect(partialParent.children).toHaveLength(2);
-		expect(partialParent.children[0]).toHaveProperty("id");
-		expect(partialParent.children[0]).toHaveProperty("name");
-		expect(partialParent.children[0]).toHaveProperty("grandChildren");
-		expect(partialParent.children[0].grandChildren).toHaveLength(3);
-		expect(partialParent.children[0].grandChildren[0]).toHaveProperty("id");
-		expect(partialParent.children[0].grandChildren[0]).toHaveProperty("name");
-		expect(partialParent.children[0].parentId).toBe(partialParent.id);
-		expect(partialParent.children[0].grandChildren[0].childId).toBe(partialParent.children[0].id);
 	});
 
-	it("should handle mixing array and single relations in the same entity", () => {
-		class Category {
-			@FactoryField((faker) => faker.number.int())
+	it("should throw and error when tries to generated an array using AutoIncrement type", () => {
+		class User {
+			@FactoryType(() => [AutoIncrement])
 			id: number;
-
-			@FactoryField((faker) => faker.commerce.department())
-			name: string;
 		}
 
+		try {
+			factory.one(User).make();
+			expect.fail("Expected an error to be thrown");
+		} catch (error) {
+			expect(error).toBeInstanceOf(Error);
+			expect(error.message).toBe("cannot generate an array of AutoIncrement values");
+		}
+	});
+
+	it("Generates Correct IDs in Deep Nested Arrays (Blog → Posts → Comments)", () => {
 		class Comment {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryType(() => AutoIncrement)
 			id: number;
-
-			@FactoryField((faker) => faker.lorem.sentence())
-			text: string;
-
-			@FactoryField((faker) => faker.number.int())
-			postId: number;
 		}
 
 		class Post {
-			@FactoryField((faker) => faker.number.int())
+			@FactoryType(() => AutoIncrement)
 			id: number;
 
-			@FactoryField((faker) => faker.lorem.sentence())
-			title: string;
-
-			@FactoryField((faker) => faker.number.int())
-			categoryId: number;
-
-			@FactoryRelationField(() => Category, { key: "categoryId", inverseKey: "id" })
-			category: Category;
-
-			@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
+			@FactoryType(() => [Comment])
 			comments: Comment[];
 		}
 
-		const factory = new Factory(faker);
-		const partialPost = factory.partial(Post, {
-			id: true,
-			title: true,
-			category: {
-				id: true,
-				name: true,
-			},
-			comments: [
-				2,
-				{
-					id: true,
-					text: true,
-				},
-			],
-		});
+		class Blog {
+			@FactoryType(() => AutoIncrement)
+			id: number;
 
-		expect(partialPost).toHaveProperty("id");
-		expect(partialPost).toHaveProperty("title");
-		expect(partialPost).toHaveProperty("category");
-		expect(partialPost).toHaveProperty("comments");
-		expect(partialPost.category).toHaveProperty("id");
-		expect(partialPost.category).toHaveProperty("name");
-		expect(partialPost.comments).toHaveLength(2);
-		expect(partialPost.comments[0]).toHaveProperty("id");
-		expect(partialPost.comments[0]).toHaveProperty("text");
-		expect(partialPost.category.id).toBe(partialPost.category.id);
-		expect(partialPost.comments[0].postId).toBe(partialPost.id);
-	});
+			@FactoryType(() => [Post])
+			posts: Post[];
+		}
 
-	// New API tests
-	describe("New API", () => {
-		it("should create a single entity with one().make()", () => {
-			class Cat {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
+		const blogs = factory.many(Blog).with(2, "posts").with(4, "posts.comments").make(3);
 
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
+		blogs.forEach((blog, index) => {
+			expect(blog.id).toBe(index + 1);
 
-			const factory = new Factory(faker);
-			const cat = factory.one(Cat).make();
+			let commentCounter = 0;
 
-			expect(cat).toBeInstanceOf(Cat);
-			expect(typeof cat.id).toBe("number");
-			expect(typeof cat.name).toBe("string");
-		});
+			blog.posts.forEach((post, postIndex) => {
+				expect(post.id).toBe(postIndex + 1);
 
-		it("should create a single entity with override using one().override().make()", () => {
-			class Cat {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			const factory = new Factory(faker);
-			const cat = factory
-				.one(Cat)
-				.override(() => ({
-					name: "John Doe",
-				}))
-				.make();
-
-			expect(cat).toBeInstanceOf(Cat);
-			expect(cat.name).toBe("John Doe");
-			expect(typeof cat.id).toBe("number");
-		});
-
-		it("should create multiple entities with many().make()", () => {
-			class Cat {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			const factory = new Factory(faker);
-			const amount = 3;
-			const cats = factory.many(Cat, amount).make();
-
-			expect(cats).toHaveLength(amount);
-			expect(cats[0]).toBeInstanceOf(Cat);
-			expect(typeof cats[0].id).toBe("number");
-			expect(typeof cats[0].name).toBe("string");
-		});
-
-		it("should create multiple entities with override using many().override().make()", () => {
-			class Cat {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			const factory = new Factory(faker);
-			const amount = 3;
-			const cats = factory
-				.many(Cat, amount)
-				.override((entities) =>
-					entities.map((_, index) => ({
-						name: `User ${index + 1}`,
-					})),
-				)
-				.make();
-
-			expect(cats).toHaveLength(amount);
-			expect(cats[0]).toBeInstanceOf(Cat);
-			expect(cats[0].name).toBe("User 1");
-			expect(cats[1].name).toBe("User 2");
-			expect(cats[2].name).toBe("User 3");
-		});
-
-		it("should create an entity with relation using one().make()", () => {
-			class Dog {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			class Cat {
-				@FactoryRelationField(() => Dog)
-				field: Dog;
-			}
-
-			const factory = new Factory(faker);
-			const cat = factory
-				.one(Cat, {
-					field: true,
-				})
-				.make();
-
-			expect(cat).toBeInstanceOf(Cat);
-			expect(cat.field).toBeInstanceOf(Dog);
-		});
-
-		it("should create an entity with relation array using one().make()", () => {
-			class Dog {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			class Cat {
-				@FactoryRelationField(() => [Dog])
-				field: Dog[];
-			}
-
-			const factory = new Factory(faker);
-			const cat = factory
-				.one(Cat, {
-					field: [5],
-				})
-				.make();
-
-			expect(cat).toBeInstanceOf(Cat);
-			expect(Array.isArray(cat.field)).toBeTruthy();
-			expect(cat.field).toHaveLength(5);
-			expect(cat.field[0]).toBeInstanceOf(Dog);
-		});
-
-		it("should create an entity with relation array with override using one().override().make()", () => {
-			class Dog {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.words({ min: 1, max: 3 }))
-				name: string;
-			}
-
-			class Cat {
-				@FactoryRelationField(() => [Dog])
-				field: Dog[];
-			}
-
-			const factory = new Factory(faker);
-			const cat = factory
-				.one(Cat, {
-					field: [5],
-				})
-				.override(() => ({
-					field: [{ name: "Custom Name" }],
-				}))
-				.make();
-
-			expect(cat).toBeInstanceOf(Cat);
-			expect(Array.isArray(cat.field)).toBeTruthy();
-			expect(cat.field).toHaveLength(5);
-			expect(cat.field[0]).toBeInstanceOf(Dog);
-			expect(cat.field[0].name).toBe("Custom Name");
-		});
-
-		it("should create a partial entity with one().partial().make()", () => {
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.firstName())
-				firstName: string;
-
-				@FactoryField((faker) => faker.person.lastName())
-				lastName: string;
-
-				@FactoryField((faker) => faker.internet.email())
-				email: string;
-			}
-
-			const factory = new Factory(faker);
-			const user = factory
-				.one(User)
-				.partial({
-					id: true,
-					firstName: true,
-				})
-				.make();
-
-			expect(user).toBeInstanceOf(User);
-			expect(user).toHaveProperty("id");
-			expect(user).toHaveProperty("firstName");
-			expect(user).not.toHaveProperty("lastName");
-			expect(user).not.toHaveProperty("email");
-			expect(typeof user.id).toBe("number");
-			expect(typeof user.firstName).toBe("string");
-		});
-
-		it("should create partial entities with many().partial().make()", () => {
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.firstName())
-				firstName: string;
-
-				@FactoryField((faker) => faker.person.lastName())
-				lastName: string;
-
-				@FactoryField((faker) => faker.internet.email())
-				email: string;
-			}
-
-			const factory = new Factory(faker);
-			const amount = 3;
-			const users = factory
-				.many(User, amount)
-				.partial({
-					id: true,
-					firstName: true,
-				})
-				.make();
-
-			expect(users).toHaveLength(amount);
-			expect(users[0]).toBeInstanceOf(User);
-			expect(users[0]).toHaveProperty("id");
-			expect(users[0]).toHaveProperty("firstName");
-			expect(users[0]).not.toHaveProperty("lastName");
-			expect(users[0]).not.toHaveProperty("email");
-			expect(typeof users[0].id).toBe("number");
-			expect(typeof users[0].firstName).toBe("string");
-		});
-
-		it("should create a partial entity with relations using one().partial().make()", () => {
-			class Photo {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.image.url())
-				url: string;
-
-				@FactoryField((faker) => faker.lorem.sentence())
-				description: string;
-
-				@FactoryField((faker) => faker.number.int())
-				userId: number;
-			}
-
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.fullName())
-				name: string;
-
-				@FactoryRelationField(() => Photo, { key: "id", inverseKey: "userId" })
-				photo: Photo;
-			}
-
-			const factory = new Factory(faker);
-			const user = factory
-				.one(User)
-				.partial({
-					id: true,
-					name: true,
-					photo: {
-						id: true,
-						url: true,
-					},
-				})
-				.make();
-
-			expect(user).toBeInstanceOf(User);
-			expect(user).toHaveProperty("id");
-			expect(user).toHaveProperty("name");
-			expect(user).toHaveProperty("photo");
-			expect(user.photo).toHaveProperty("id");
-			expect(user.photo).toHaveProperty("url");
-			expect(user.photo).not.toHaveProperty("description");
-			expect(typeof user.id).toBe("number");
-			expect(typeof user.name).toBe("string");
-			expect(typeof user.photo.id).toBe("number");
-			expect(typeof user.photo.url).toBe("string");
-			expect(user.photo.userId).toBe(user.id);
-		});
-
-		it("should create a partial entity with override using one().partial().override().make()", () => {
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.firstName())
-				firstName: string;
-
-				@FactoryField((faker) => faker.person.lastName())
-				lastName: string;
-
-				@FactoryField((faker) => faker.internet.email())
-				email: string;
-			}
-
-			const factory = new Factory(faker);
-			const user = factory
-				.one(User)
-				.partial({
-					id: true,
-					firstName: true,
-				})
-				.override(() => ({
-					firstName: "Custom Name",
-				}))
-				.make();
-
-			expect(user).toBeInstanceOf(User);
-			expect(user).toHaveProperty("id");
-			expect(user).toHaveProperty("firstName");
-			expect(user).not.toHaveProperty("lastName");
-			expect(user).not.toHaveProperty("email");
-			expect(typeof user.id).toBe("number");
-			expect(user.firstName).toBe("Custom Name");
-		});
-
-		it("should create partial entities with override using many().partial().override().make()", () => {
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.firstName())
-				firstName: string;
-
-				@FactoryField((faker) => faker.person.lastName())
-				lastName: string;
-
-				@FactoryField((faker) => faker.internet.email())
-				email: string;
-			}
-
-			const factory = new Factory(faker);
-			const amount = 3;
-			const users = factory
-				.many(User, amount)
-				.partial({
-					id: true,
-					firstName: true,
-				})
-				.override((entities) =>
-					entities.map((_, index) => ({
-						firstName: `User ${index + 1}`,
-					}))
-				)
-				.make();
-
-			expect(users).toHaveLength(amount);
-			expect(users[0]).toBeInstanceOf(User);
-			expect(users[0]).toHaveProperty("id");
-			expect(users[0]).toHaveProperty("firstName");
-			expect(users[0]).not.toHaveProperty("lastName");
-			expect(users[0]).not.toHaveProperty("email");
-			expect(typeof users[0].id).toBe("number");
-			expect(users[0].firstName).toBe("User 1");
-			expect(users[1].firstName).toBe("User 2");
-			expect(users[2].firstName).toBe("User 3");
-		});
-	});
-
-	describe("Advanced scenarios", () => {
-		it("should handle circular dependencies using one().make()", () => {
-			class Parent {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.fullName())
-				name: string;
-
-				@FactoryRelationField(() => Child, { key: "id", inverseKey: "parentId" })
-				child: Child;
-			}
-
-			class Child {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.fullName())
-				name: string;
-
-				@FactoryField((faker) => faker.number.int())
-				parentId: number;
-
-				@FactoryRelationField(() => Parent, { key: "parentId", inverseKey: "id" })
-				parent: Parent;
-			}
-
-			const factory = new Factory(faker);
-			const parent = factory
-				.one(Parent, {
-					child: {
-						parent: true,
-					},
-				})
-				.make();
-
-			expect(parent).toBeInstanceOf(Parent);
-			expect(parent.child).toBeInstanceOf(Child);
-			expect(parent.child.parent).toBeInstanceOf(Parent);
-			expect(parent.child.parentId).toBe(parent.id);
-			expect(parent.child.parent.id).toBe(parent.id);
-
-			// Verify that we don't have infinite recursion
-			expect(parent.child.parent.child).toBeUndefined();
-		});
-
-		it("should handle very deeply nested relationships using one().make()", () => {
-			class Level4 {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.word())
-				name: string;
-
-				@FactoryField((faker) => faker.number.int())
-				level3Id: number;
-			}
-
-			class Level3 {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.word())
-				name: string;
-
-				@FactoryField((faker) => faker.number.int())
-				level2Id: number;
-
-				@FactoryRelationField(() => [Level4], { key: "id", inverseKey: "level3Id" })
-				level4Items: Level4[];
-			}
-
-			class Level2 {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.word())
-				name: string;
-
-				@FactoryField((faker) => faker.number.int())
-				level1Id: number;
-
-				@FactoryRelationField(() => [Level3], { key: "id", inverseKey: "level2Id" })
-				level3Items: Level3[];
-			}
-
-			class Level1 {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.word())
-				name: string;
-
-				@FactoryRelationField(() => [Level2], { key: "id", inverseKey: "level1Id" })
-				level2Items: Level2[];
-			}
-
-			const factory = new Factory(faker);
-			const level1 = factory
-				.one(Level1, {
-					level2Items: [
-						2,
-						{
-							level3Items: [
-								2,
-								{
-									level4Items: [3],
-								},
-							],
-						},
-					],
-				})
-				.make();
-
-			expect(level1).toBeInstanceOf(Level1);
-			expect(level1.level2Items).toHaveLength(2);
-			expect(level1.level2Items[0]).toBeInstanceOf(Level2);
-			expect(level1.level2Items[0].level1Id).toBe(level1.id);
-
-			expect(level1.level2Items[0].level3Items).toHaveLength(2);
-			expect(level1.level2Items[0].level3Items[0]).toBeInstanceOf(Level3);
-			expect(level1.level2Items[0].level3Items[0].level2Id).toBe(level1.level2Items[0].id);
-
-			expect(level1.level2Items[0].level3Items[0].level4Items).toHaveLength(3);
-			expect(level1.level2Items[0].level3Items[0].level4Items[0]).toBeInstanceOf(Level4);
-			expect(level1.level2Items[0].level3Items[0].level4Items[0].level3Id).toBe(level1.level2Items[0].level3Items[0].id);
-		});
-
-		it("should handle multiple circular dependencies in a complex relationship graph", () => {
-			// Define a complex relationship graph with multiple circular dependencies
-			class User {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.person.fullName())
-				name: string;
-
-				@FactoryRelationField(() => [Post], { key: "id", inverseKey: "authorId" })
-				posts: Post[];
-
-				@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "userId" })
-				comments: Comment[];
-			}
-
-			class Post {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.sentence())
-				title: string;
-
-				@FactoryField((faker) => faker.number.int())
-				authorId: number;
-
-				@FactoryRelationField(() => User, { key: "authorId", inverseKey: "id" })
-				author: User;
-
-				@FactoryRelationField(() => [Comment], { key: "id", inverseKey: "postId" })
-				comments: Comment[];
-			}
-
-			class Comment {
-				@FactoryField((faker) => faker.number.int())
-				id: number;
-
-				@FactoryField((faker) => faker.lorem.paragraph())
-				content: string;
-
-				@FactoryField((faker) => faker.number.int())
-				userId: number;
-
-				@FactoryField((faker) => faker.number.int())
-				postId: number;
-
-				@FactoryRelationField(() => User, { key: "userId", inverseKey: "id" })
-				user: User;
-
-				@FactoryRelationField(() => Post, { key: "postId", inverseKey: "id" })
-				post: Post;
-			}
-
-			const factory = new Factory(faker);
-
-			// Create a user with posts, where each post has comments, and each comment references back to the user and post
-			const user = factory
-				.one(User, {
-					posts: [
-						2,
-						{
-							comments: [
-								2,
-								{
-									user: true,
-									post: true,
-								},
-							],
-							author: true,
-						},
-					],
-				})
-				.make();
-
-			expect(user).toBeInstanceOf(User);
-			expect(user.posts).toHaveLength(2);
-
-			// Check first level of circular references
-			for (const post of user.posts) {
-				expect(post).toBeInstanceOf(Post);
-				expect(post.authorId).toBe(user.id);
-				expect(post.author).toBeInstanceOf(User);
-				expect(post.author.id).toBe(user.id); // Same ID, but not necessarily the same instance
-				expect(post.comments).toHaveLength(2);
-
-				// Check second level of circular references
 				for (const comment of post.comments) {
-					expect(comment).toBeInstanceOf(Comment);
-					expect(comment.postId).toBe(post.id);
-					expect(comment.post).toBeInstanceOf(Post);
-					expect(comment.post.id).toBe(comment.postId); // IDs match
-					expect(comment.user).toBeInstanceOf(User);
-					expect(comment.user.id).toBe(comment.userId); // IDs match
+					commentCounter += 1;
+					expect(comment.id).toBe(commentCounter);
 				}
+			});
+		});
+	});
+
+	it("plain() Preserves AutoIncrement Values in Nested Structures", () => {
+		class Leaf {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+		class Branch {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+
+			@FactoryType(() => [Leaf])
+			leaves: Leaf[];
+		}
+		class Tree {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+
+			@FactoryType(() => [Branch])
+			branches: Branch[];
+		}
+
+		// one tree with 3 branches with 2 leaves each
+		const tree = factory.one(Tree).with(3, "branches").with(2, "branches.leaves").plain();
+
+		expect(tree).toBeInstanceOf(Object);
+		expect(tree.id).toBe(1);
+
+		let leafCounter = 0;
+
+		tree.branches.forEach((branch, index) => {
+			expect(branch.id).toBe(index + 1);
+
+			for (const leaf of branch.leaves) {
+				leafCounter += 1;
+				expect(leaf.id).toBe(leafCounter);
 			}
 		});
+	});
+
+	it("AutoIncrement Counters Restart for Each Independent EntityBuilder", () => {
+		class User {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		const first = factory.one(User).make();
+		const second = factory.one(User).make();
+
+		expect(first.id).toBe(1);
+		expect(second.id).toBe(1);
+		expect(first).not.toBe(second);
+	});
+
+	it("Root AutoIncrement ID with Child Task Array Mixing AutoIncrement IDs and UUIDs", () => {
+		class Task {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+
+			@FactoryType(() => UUID)
+			taskId: string;
+		}
+
+		class Project {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+
+			@FactoryType(() => [Task])
+			tasks: Task[];
+		}
+
+		const projects = factory.many(Project).with(7, "tasks").make(2);
+
+		projects.forEach((project, index) => {
+			expect(project.id).toBe(index + 1);
+
+			project.tasks.forEach((task, taskIndex) => {
+				expect(task.id).toBe(taskIndex + 1);
+				expect(validate(task.taskId) && version(task.taskId) === 4).toBe(true);
+			});
+		});
+	});
+
+	it("should allow overriding an array field of primitive values", () => {
+		class User {
+			@FactoryValue((faker) => faker.lorem.word(), { isArray: true })
+			tags: string[];
+		}
+
+		const customTags = ["alpha", "beta", "gamma"];
+		const user = factory.one(User).set("tags", customTags).make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.tags).toEqual(customTags);
+	});
+
+	it("should exclude an entire nested relation after it was included", () => {
+		class Photo {
+			@FactoryValue((faker) => faker.image.url())
+			url: string;
+		}
+
+		class User {
+			@FactoryType(() => Photo)
+			photo: Photo;
+		}
+
+		// include the relation, then remove it
+		const user = factory.one(User).with("photo").without("photo").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.photo).toBeUndefined();
+	});
+
+	it("keeps AutoIncrement counters independent across different entity types", () => {
+		class Comment {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		class Post {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		const firstComment = factory.one(Comment).make();
+		const firstPost = factory.one(Post).make();
+
+		expect(firstComment.id).toBe(1);
+		expect(firstPost.id).toBe(1);
+	});
+
+	it("creates an entity with an array of strings using FactoryType", () => {
+		class User {
+			@FactoryType(() => [String])
+			tags: string[];
+		}
+
+		const user = factory.one(User).with(4, "tags").make();
+
+		expect(user).toBeInstanceOf(User);
+		expect(user.tags).toBeInstanceOf(Array);
+		expect(user.tags.length).toBe(4);
+		for (const tag of user.tags) {
+			expect(typeof tag).toBe("string");
+		}
+	});
+
+	it("returns an empty array when amount is zero", () => {
+		class User {
+			@FactoryValue((f) => f.number.int({ min: 1, max: 1000 }))
+			id!: number;
+		}
+
+		const users = factory.many(User).make(0);
+
+		expect(users).toEqual([]);
+	});
+
+	it("creates an entity whose array relation is explicitly zero-length", () => {
+		class Photo {}
+		class User {
+			@FactoryType(() => [Photo])
+			photos!: Photo[];
+		}
+
+		const user = factory.one(User).with(0, "photos").make();
+
+		expect(user.photos).toEqual([]);
+	});
+
+	it("throws when a negative amount is supplied to with()", () => {
+		class Tag {
+			@FactoryValue((f) => f.word.noun())
+			name: string;
+		}
+		class Post {
+			@FactoryType(() => [Tag])
+			tags: Tag[];
+		}
+
+		const amount = -3;
+
+		try {
+			factory.one(Post).with(amount, "tags").make();
+			expect.fail("Expected an error to be thrown");
+		} catch (error) {
+			expect(error).instanceof(Error);
+			expect(error.message).toBe(`Amount supplied to .with() must be zero or positive, but got ${amount}`);
+		}
+	});
+
+	it("throws when a negative amount is supplied to many().make()", () => {
+		class User {
+			@FactoryValue((f) => f.person.fullName())
+			name: string;
+		}
+
+		const amount = -5;
+
+		try {
+			factory.many(User).make(amount);
+			expect.fail("Expected an error to be thrown");
+		} catch (error) {
+			expect(error).instanceof(Error);
+			expect(error.message).toBe(`Amount supplied to .make() must be zero or positive, but got ${amount}`);
+		}
+	});
+
+	it("allows overriding an AutoIncrement field value explicitly", () => {
+		class User {
+			@FactoryType(() => AutoIncrement)
+			id: number;
+		}
+
+		const user = factory.one(User).set("id", 99).make();
+
+		expect(user.id).toBe(99);
+	});
+
+	it("keeps values like after generation", () => {
+		class Product {
+			@FactoryValue(() => "R5 5600G")
+			description: string;
+		}
+
+		const product = factory.one(Product).make();
+
+		expect(product.description).toBe("R5 5600G");
+	});
+
+	it("set() after with() on an array overrides the generated contents", () => {
+		class User {
+			@FactoryValue((f) => f.lorem.word(), { isArray: true })
+			tags: string[];
+		}
+
+		const user = factory.one(User).with(5, "tags").set("tags", ["one", "two"]).make();
+
+		expect(user.tags).toEqual(["one", "two"]);
 	});
 });

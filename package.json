@@ -60,5 +60,7 @@
 		"@faker-js/faker": ">= 8.4.1",
 		"reflect-metadata": ">=0.2.2"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"uuid": "^11.1.0"
+	}
 }

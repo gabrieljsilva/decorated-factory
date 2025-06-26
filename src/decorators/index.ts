@@ -1,2 +1,2 @@
-export * from "./factory-field.decorator";
-export * from "./factory-relation-field.decorator";
+export * from "./factory-value.decorator";
+export * from "./factory-type.decorator";

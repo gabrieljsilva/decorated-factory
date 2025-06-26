@@ -1,3 +1,3 @@
-export * from "./deep-partial";
+export * from "./factory";
+export * from "./paths";
 export * from "./type";
-export * from "./select";

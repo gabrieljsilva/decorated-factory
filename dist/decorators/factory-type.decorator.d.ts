@@ -4,9 +4,9 @@ export interface RelationKeyBinding<Parent, Child> {
     key: Paths<Parent>;
     inverseKey: Paths<Child>;
 }
-export interface FactoryRelationMetadata {
+export interface FactoryTypeMetadata {
     property: string;
     returnTypeFn: () => Type | [Type];
     keyBinding?: RelationKeyBinding<any, any>;
 }
-export declare function FactoryRelationField<Parent, Child>(returnValueFN: () => Type<Child> | [Type<Child>], keyBinding?: RelationKeyBinding<Parent, Child>): (target: NonNullable<any>, propertyKey: string) => void;
+export declare function FactoryType<Parent, Child>(returnValueFN: () => Type<Child> | [Type<Child>], keyBinding?: RelationKeyBinding<Parent, Child>): (target: NonNullable<any>, propertyKey: string) => void;

@@ -1,16 +1,16 @@
 import "reflect-metadata";
-import { FACTORY_FIELD } from "../constants";
-import { FactoryField } from "./factory-field.decorator";
+import { FACTORY_VALUE } from "../constants";
+import { FactoryValue } from "./factory-value.decorator";
 
 describe("FactoryField tests", () => {
 	it("should add metadata field", () => {
 		const getValueFn = () => "Hello World";
 		class Cat {
-			@FactoryField(getValueFn)
+			@FactoryValue(getValueFn)
 			field: string;
 		}
 
-		const metadata = Reflect.getMetadata(FACTORY_FIELD, Cat);
+		const metadata = Reflect.getMetadata(FACTORY_VALUE, Cat);
 		expect(metadata).toEqual([
 			{
 				property: "field",

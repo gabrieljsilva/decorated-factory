@@ -1,7 +1,211 @@
 import 'reflect-metadata';
 
-const FACTORY_FIELD = Symbol("FACTORY_FIELD_METADATA");
-const FACTORY_RELATION = Symbol("FACTORY_RELATION_METADATA");
+const FACTORY_VALUE = Symbol("FACTORY_VALUE_METADATA");
+const FACTORY_TYPE = Symbol("FACTORY_TYPE_METADATA");
+
+class UUID {
+}
+class AutoIncrement {
+}
+
+class EntityBuilder {
+    constructor({ faker, entity, plain = false }) {
+        this.relations = new Map();
+        this.exclusions = new Set();
+        this.overrides = new Map();
+        this.globalAutoCounters = new Map();
+        this.localAutoCounters = new Map();
+        this.currentRoot = null;
+        this.faker = faker;
+        this.entityType = entity;
+        this.asPlain = plain;
+    }
+    with(amountOrPath, maybePath) {
+        if (typeof amountOrPath === "number") {
+            if (amountOrPath < 0) {
+                throw new Error(`Amount supplied to .with() must be zero or positive, but got ${amountOrPath}`);
+            }
+            this.relations.set(maybePath, amountOrPath);
+            return this;
+        }
+        this.relations.set(amountOrPath, undefined);
+        return this;
+    }
+    without(path) {
+        this.exclusions.add(path);
+        return this;
+    }
+    set(path, value) {
+        const parts = path.split(".");
+        if (parts.length > 1) {
+            const parent = parts.slice(0, -1).join(".");
+            if (!this.hasRelation(parent)) {
+                throw new Error(`Cannot override nested path "${path}" – missing .with("${parent}") call`);
+            }
+        }
+        this.overrides.set(path, value);
+        return this;
+    }
+    make(size) {
+        const rootAmount = size !== null && size !== void 0 ? size : this.relations.get("__root__");
+        if (typeof rootAmount === "number") {
+            if (rootAmount < 0) {
+                throw new Error(`Amount supplied to .make() must be zero or positive, but got ${rootAmount}`);
+            }
+            const list = [];
+            for (let i = 0; i < rootAmount; i++) {
+                list.push(this.spawnRoot());
+            }
+            return list;
+        }
+        return this.spawnRoot();
+    }
+    plain(size) {
+        this.asPlain = true;
+        return this.make(size);
+    }
+    spawnRoot() {
+        const root = this.asPlain ? {} : new this.entityType();
+        this.currentRoot = root;
+        this.populate(root, this.entityType, "");
+        return root;
+    }
+    spawnChild(entityType, path) {
+        if (entityType === AutoIncrement) {
+            return this.generateAutoIncrement(path);
+        }
+        if (BUILT_IN_TYPES.has(entityType)) {
+            const valueGenerator = BUILT_IN_TYPES.get(entityType);
+            return valueGenerator ? valueGenerator(this.faker) : null;
+        }
+        const instance = new entityType();
+        this.populate(instance, entityType, path);
+        return instance;
+    }
+    hasRelation(path) {
+        for (const key of this.relations.keys()) {
+            if (key === path)
+                return true;
+            if (key.startsWith(`${path}.`))
+                return true;
+        }
+        return false;
+    }
+    populate(target, entityType, prefix) {
+        var _a;
+        for (const field of this.readFieldMeta(entityType)) {
+            const full = prefix ? `${prefix}.${field.property}` : field.property;
+            if (this.exclusions.has(full))
+                continue;
+            if (this.overrides.has(full)) {
+                target[field.property] = this.overrides.get(full);
+                continue;
+            }
+            const amount = this.relations.get(full);
+            if (typeof amount === "number") {
+                const items = [];
+                for (let i = 0; i < amount; i++)
+                    items.push(field.getValueFN(this.faker));
+                target[field.property] = items;
+                continue;
+            }
+            if (field.isArray) {
+                const items = [];
+                const itemCount = typeof amount === "number" ? amount : 1;
+                for (let i = 0; i < itemCount; i++) {
+                    items.push(field.getValueFN(this.faker));
+                }
+                target[field.property] = items;
+                continue;
+            }
+            target[field.property] = field.getValueFN(this.faker);
+        }
+        for (const relation of this.readRelationMeta(entityType)) {
+            const full = prefix ? `${prefix}.${relation.property}` : relation.property;
+            if (this.exclusions.has(full))
+                continue;
+            if (this.overrides.has(full)) {
+                target[relation.property] = this.overrides.get(full);
+                continue;
+            }
+            const returnType = relation.returnTypeFn();
+            const actualType = Array.isArray(returnType) ? returnType[0] : returnType;
+            const isBuiltInType = BUILT_IN_TYPES.has(actualType);
+            if (!isBuiltInType && !this.hasRelation(full))
+                continue;
+            const asArray = Array.isArray(returnType);
+            if (asArray && returnType[0] === AutoIncrement) {
+                throw new Error("cannot generate an array of AutoIncrement values");
+            }
+            const count = (_a = this.relations.get(full)) !== null && _a !== void 0 ? _a : 1;
+            if (asArray) {
+                const childArr = [];
+                const childType = returnType[0];
+                for (let i = 0; i < count; i++) {
+                    const child = this.spawnChild(childType, full);
+                    this.bindKeys(target, child, relation);
+                    childArr.push(child);
+                }
+                target[relation.property] = childArr;
+                continue;
+            }
+            const child = this.spawnChild(returnType, full);
+            this.bindKeys(target, child, relation);
+            target[relation.property] = child;
+        }
+    }
+    bindKeys(parent, child, meta) {
+        const keyBinding = meta.keyBinding;
+        if (!keyBinding)
+            return;
+        child[keyBinding.inverseKey] = parent[keyBinding.key];
+    }
+    readFieldMeta(entity) {
+        return Reflect.getMetadata(FACTORY_VALUE, entity) || [];
+    }
+    readRelationMeta(entity) {
+        return Reflect.getMetadata(FACTORY_TYPE, entity) || [];
+    }
+    generateAutoIncrement(fullPath) {
+        var _a, _b;
+        if (fullPath.includes(".")) {
+            if (!this.currentRoot)
+                throw new Error("No root context");
+            let counters = this.localAutoCounters.get(this.currentRoot);
+            if (!counters) {
+                counters = new Map();
+                this.localAutoCounters.set(this.currentRoot, counters);
+            }
+            const next = ((_a = counters.get(fullPath)) !== null && _a !== void 0 ? _a : 0) + 1;
+            counters.set(fullPath, next);
+            return next;
+        }
+        const next = ((_b = this.globalAutoCounters.get(fullPath)) !== null && _b !== void 0 ? _b : 0) + 1;
+        this.globalAutoCounters.set(fullPath, next);
+        return next;
+    }
+}
+class Factory {
+    constructor(faker) {
+        this.fake = faker;
+    }
+    one(entity) {
+        return new EntityBuilder({ faker: this.fake, entity });
+    }
+    many(entity) {
+        const defaultAmount = 1;
+        return new EntityBuilder({ faker: this.fake, entity }).with(defaultAmount, "__root__");
+    }
+}
+
+const BUILT_IN_TYPES = new Map([
+    [String, (faker) => faker.lorem.word({ length: { min: 6, max: 12 } })],
+    [Number, (faker) => faker.number.int({ min: 1, max: 10000 })],
+    [Boolean, (faker) => faker.datatype.boolean()],
+    [Date, (faker) => faker.date.past()],
+    [UUID, (faker) => faker.string.uuid()],
+    [AutoIncrement, () => 0],
+]);
 
 function extendArrayMetadata(key, metadata, target) {
     const previousValue = Reflect.getMetadata(key, target) || [];
@@ -9,291 +213,26 @@ function extendArrayMetadata(key, metadata, target) {
     Reflect.defineMetadata(key, value, target);
 }
 
-function resolvePath(entity, path) {
-    if (!path || !entity) {
-        return undefined;
-    }
-    let current = entity;
-    let part = "";
-    for (let i = 0; i <= path.length; i++) {
-        const char = path[i];
-        if (char === "." || i === path.length) {
-            if (Array.isArray(current)) {
-                const results = [];
-                for (const item of current) {
-                    if (item && item[part] !== undefined) {
-                        results.push(item[part]);
-                    }
-                }
-                current = results.length ? results : undefined;
-            }
-            else {
-                if (current === undefined) {
-                    return undefined;
-                }
-                current = current[part];
-            }
-            part = "";
-        }
-        else {
-            part += char;
-        }
-    }
-    return current;
-}
-
-function FactoryField(getValueFn) {
+function FactoryValue(getValueFn, options) {
     return (target, propertyKey) => {
         const metadata = {
             property: propertyKey,
             getValueFN: getValueFn,
+            isArray: options === null || options === void 0 ? void 0 : options.isArray,
         };
-        extendArrayMetadata(FACTORY_FIELD, [metadata], target.constructor);
+        extendArrayMetadata(FACTORY_VALUE, [metadata], target.constructor);
     };
 }
 
-function FactoryRelationField(returnValueFN, keyBinding) {
+function FactoryType(returnValueFN, keyBinding) {
     return (target, propertyKey) => {
         const factoryRelationMetadata = {
             property: propertyKey,
             returnTypeFn: returnValueFN,
             keyBinding,
         };
-        extendArrayMetadata(FACTORY_RELATION, [factoryRelationMetadata], target.constructor);
+        extendArrayMetadata(FACTORY_TYPE, [factoryRelationMetadata], target.constructor);
     };
 }
 
-class Overridable {
-    constructor(instance) {
-        this.instance = instance;
-    }
-    override(override) {
-        this.deepMerge(this.instance, override(this.instance));
-        return this.instance;
-    }
-    getInstance() {
-        return this.instance;
-    }
-    deepMerge(entity, override) {
-        if (!override)
-            return;
-        for (const [key, value] of Object.entries(override)) {
-            if (value instanceof Date) {
-                entity[key] = value;
-                continue;
-            }
-            if (Array.isArray(entity[key]) && Array.isArray(value)) {
-                this.mergeArray(entity[key], value);
-                continue;
-            }
-            if (value !== null && typeof value === "object" && typeof entity[key] === "object") {
-                this.deepMerge(entity[key], value);
-                continue;
-            }
-            entity[key] = value;
-        }
-    }
-    mergeArray(entityArray, overrideArray) {
-        for (const [index, valueToMerge] of overrideArray.entries()) {
-            if (valueToMerge instanceof Date) {
-                entityArray[index] = valueToMerge;
-                continue;
-            }
-            if (typeof valueToMerge === "object" && valueToMerge !== null) {
-                this.deepMerge(entityArray[index], valueToMerge);
-                continue;
-            }
-            entityArray[index] = valueToMerge;
-        }
-    }
-}
-
-class OneFactory {
-    constructor(factory, entity, select) {
-        this.factory = factory;
-        this.entity = entity;
-        this.select = select;
-    }
-    override(overrideFn) {
-        this.overrideFn = overrideFn;
-        return this;
-    }
-    partial(select) {
-        this.partialSelect = select;
-        return this;
-    }
-    make() {
-        let instance;
-        if (this.partialSelect) {
-            instance = this.factory.partial(this.entity, this.partialSelect);
-        }
-        else {
-            instance = this.factory.new(this.entity, this.select);
-        }
-        if (this.overrideFn) {
-            return new Overridable(instance).override(this.overrideFn);
-        }
-        return instance;
-    }
-    build() {
-        return this.make();
-    }
-}
-class ManyFactory {
-    constructor(factory, entity, amount, select) {
-        this.factory = factory;
-        this.entity = entity;
-        this.amount = amount;
-        this.select = select;
-    }
-    override(overrideFn) {
-        this.overrideFn = overrideFn;
-        return this;
-    }
-    partial(select) {
-        this.partialSelect = select;
-        return this;
-    }
-    make() {
-        let instances;
-        if (this.partialSelect) {
-            instances = new Array(this.amount).fill(null).map(() => this.factory.partial(this.entity, this.partialSelect));
-        }
-        else {
-            instances = this.factory.newList(this.entity, this.amount, this.select);
-        }
-        if (this.overrideFn) {
-            const overrides = this.overrideFn(instances);
-            return instances.map((instance, index) => {
-                if (index < overrides.length) {
-                    return new Overridable(instance).override(() => overrides[index]);
-                }
-                return instance;
-            });
-        }
-        return instances;
-    }
-    build() {
-        return this.make();
-    }
-}
-class Factory {
-    constructor(fakerInstance) {
-        this.faker = fakerInstance;
-    }
-    one(entity, select) {
-        return new OneFactory(this, entity, select);
-    }
-    many(entity, amount, select) {
-        return new ManyFactory(this, entity, amount, select);
-    }
-    create(entity, select) {
-        return new Overridable(this.new(entity, select));
-    }
-    createList(entity, amount, select) {
-        const entities = this.newList(entity, amount, select);
-        return new Overridable(entities);
-    }
-    new(entity, select) {
-        const instance = this.createInstance(entity, select);
-        this.applyRelations(entity, instance, select);
-        return instance;
-    }
-    newList(entity, amount, select) {
-        return new Array(amount).fill(null).map(() => this.new(entity, select));
-    }
-    partial(entity, select) {
-        const instance = this.createPartialInstance(entity, select);
-        this.applyPartialRelations(entity, instance, select);
-        return instance;
-    }
-    applyEntityRelations(entity, instance, select, isPartial = false) {
-        const relationFieldMetadata = Reflect.getMetadata(FACTORY_RELATION, entity) || [];
-        for (const meta of relationFieldMetadata) {
-            const selectedField = select === null || select === void 0 ? void 0 : select[meta.property];
-            if (selectedField) {
-                const returnType = meta.returnTypeFn();
-                const isRelationArray = Array.isArray(returnType);
-                const relationType = isRelationArray ? returnType[0] : returnType;
-                if (isRelationArray) {
-                    const [instancesToCreate, relationSelect] = selectedField;
-                    instance[meta.property] = new Array(instancesToCreate).fill(null).map(() => {
-                        const relationInstance = isPartial
-                            ? this.partial(relationType, relationSelect || {})
-                            : this.new(relationType, relationSelect);
-                        this.applyKeyBinding(meta, instance, relationInstance);
-                        if (!isPartial) {
-                            this.bindNestedRelations(relationInstance);
-                        }
-                        return relationInstance;
-                    });
-                    continue;
-                }
-                const relationInstance = isPartial
-                    ? this.partial(relationType, selectedField)
-                    : this.new(relationType, selectedField);
-                this.applyKeyBinding(meta, instance, relationInstance);
-                if (!isPartial) {
-                    this.bindNestedRelations(relationInstance);
-                }
-                instance[meta.property] = relationInstance;
-            }
-        }
-    }
-    applyRelations(entity, instance, select) {
-        this.applyEntityRelations(entity, instance, select, false);
-    }
-    applyKeyBinding(meta, parentInstance, relationInstance) {
-        if (meta.keyBinding) {
-            const parentValue = resolvePath(parentInstance, meta.keyBinding.key);
-            if (parentValue !== undefined) {
-                relationInstance[meta.keyBinding.inverseKey] = parentValue;
-            }
-        }
-    }
-    bindNestedRelations(relationInstance) {
-        const nestedRelationMetadata = Reflect.getMetadata(FACTORY_RELATION, relationInstance.constructor) || [];
-        for (const nestedMeta of nestedRelationMetadata) {
-            const nestedField = relationInstance[nestedMeta.property];
-            if (!nestedField)
-                continue;
-            if (Array.isArray(nestedField)) {
-                for (const nested of nestedField) {
-                    this.applyKeyBinding(nestedMeta, relationInstance, nested);
-                }
-            }
-            else if (nestedField && typeof nestedField === "object") {
-                this.applyKeyBinding(nestedMeta, relationInstance, nestedField);
-            }
-        }
-    }
-    createEntityInstance(entity, select, isPartial = false) {
-        const instance = new entity();
-        const fieldMetadata = Reflect.getMetadata(FACTORY_FIELD, entity) || [];
-        for (const meta of fieldMetadata) {
-            const fieldSelect = select === null || select === void 0 ? void 0 : select[meta.property];
-            if (isPartial) {
-                if (fieldSelect === true) {
-                    instance[meta.property] = meta.getValueFN(this.faker);
-                }
-            }
-            else {
-                if (fieldSelect !== false) {
-                    instance[meta.property] = meta.getValueFN(this.faker);
-                }
-            }
-        }
-        return instance;
-    }
-    createInstance(entity, select) {
-        return this.createEntityInstance(entity, select, false);
-    }
-    createPartialInstance(entity, select) {
-        return this.createEntityInstance(entity, select, true);
-    }
-    applyPartialRelations(entity, instance, select) {
-        this.applyEntityRelations(entity, instance, select, true);
-    }
-}
-
-export { Factory, FactoryField, FactoryRelationField, Overridable };
+export { AutoIncrement, Factory, FactoryType, FactoryValue, UUID };

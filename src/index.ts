@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-export { FactoryField } from "./decorators/factory-field.decorator";
-export { FactoryRelationField } from "./decorators/factory-relation-field.decorator";
+export { FactoryValue } from "./decorators/factory-value.decorator";
+export { FactoryType } from "./decorators/factory-type.decorator";
 export { Factory } from "./lib/factory";
-export { Overridable } from "./lib/overridable";
+export { UUID, AutoIncrement } from "./lib/built-in-types";

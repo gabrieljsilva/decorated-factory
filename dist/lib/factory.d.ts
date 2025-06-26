@@ -1,47 +1,36 @@
 import type { Faker } from "@faker-js/faker";
-import type { DeepPartial, Select, Type } from "../interfaces";
-import { Overridable } from "./overridable";
-export declare class OneFactory<T> {
-    private readonly factory;
-    private readonly entity;
-    private readonly select?;
-    private overrideFn?;
-    private partialSelect?;
-    constructor(factory: Factory, entity: Type<T>, select?: Select<T>);
-    override(overrideFn: (instance: T) => DeepPartial<T>): OneFactory<T>;
-    partial(select: Select<T>): OneFactory<T>;
-    make(): T;
-    build(): T;
-}
-export declare class ManyFactory<T> {
-    private readonly factory;
-    private readonly entity;
-    private readonly amount;
-    private readonly select?;
-    private overrideFn?;
-    private partialSelect?;
-    constructor(factory: Factory, entity: Type<T>, amount: number, select?: Select<T>);
-    override(overrideFn: (instances: T[]) => DeepPartial<T>[]): ManyFactory<T>;
-    partial(select: Select<T>): ManyFactory<T>;
-    make(): T[];
-    build(): T[];
+import type { ArrayPaths, BuildOpts, Paths, Type } from "../interfaces";
+import { Plain } from "../interfaces/plain";
+declare class EntityBuilder<T, M extends boolean = false> {
+    private readonly faker;
+    private readonly entityType;
+    private readonly relations;
+    private readonly exclusions;
+    private readonly overrides;
+    private readonly globalAutoCounters;
+    private readonly localAutoCounters;
+    private currentRoot;
+    private asPlain;
+    constructor({ faker, entity, plain }: BuildOpts<T>);
+    with<P extends Paths<T>>(path: P): this;
+    with<P extends ArrayPaths<T>>(amount: number, path: P): this;
+    without<P extends Paths<T>>(path: P): this;
+    set<P extends Paths<T>>(path: P, value: any): this;
+    make(size?: M extends true ? number : never): M extends true ? T[] : T;
+    plain(size?: M extends true ? number : never): M extends true ? Plain<T>[] : Plain<T>;
+    private spawnRoot;
+    private spawnChild;
+    private hasRelation;
+    private populate;
+    private bindKeys;
+    private readFieldMeta;
+    private readRelationMeta;
+    private generateAutoIncrement;
 }
 export declare class Factory {
-    private readonly faker;
-    constructor(fakerInstance: Faker);
-    one<T>(entity: Type<T>, select?: Select<T>): OneFactory<T>;
-    many<T>(entity: Type<T>, amount: number, select?: Select<T>): ManyFactory<T>;
-    create<T>(entity: Type<T>, select?: Select<T>): Overridable<T>;
-    createList<T>(entity: Type<T>, amount: number, select?: Select<T>): Overridable<T[]>;
-    new<T = any>(entity: Type<T>, select?: Select<T>): T;
-    newList<T = any>(entity: Type<T>, amount: number, select?: Select<T>): Array<T>;
-    partial<T = any>(entity: Type<T>, select: Select<T>): DeepPartial<T>;
-    private applyEntityRelations;
-    private applyRelations;
-    private applyKeyBinding;
-    private bindNestedRelations;
-    private createEntityInstance;
-    private createInstance;
-    private createPartialInstance;
-    private applyPartialRelations;
+    private readonly fake;
+    constructor(faker: Faker);
+    one<T>(entity: Type<T>): EntityBuilder<T, false>;
+    many<T>(entity: Type<T>): EntityBuilder<T, true>;
 }
+export {};
