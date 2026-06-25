@@ -1,0 +1,45 @@
+name: Dependabot changeset
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  changeset:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Add changeset for the dependency bump
+        env:
+          DEPS: ${{ steps.meta.outputs.dependency-names }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          FILE=".changeset/dependabot-pr-${PR}.md"
+          if [ -f "$FILE" ]; then
+            echo "Changeset already present, nothing to do."
+            exit 0
+          fi
+          {
+            echo '---'
+            echo '"decorated-factory": patch'
+            echo '---'
+            echo ''
+            echo "chore(deps): bump ${DEPS}"
+          } > "$FILE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "chore: add changeset for dependabot update"
+          git push
