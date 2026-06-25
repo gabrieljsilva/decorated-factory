@@ -3,6 +3,14 @@
 	"organizeImports": {
 		"enabled": true
 	},
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignore": ["dist", "coverage"]
+	},
 	"javascript": {
 		"formatter": {
 			"lineWidth": 120,

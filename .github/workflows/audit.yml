@@ -1,0 +1,58 @@
+name: Security audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: npm audit fix
+        run: npm audit fix || true
+
+      - name: Open pull request when something changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CHANGED="$(git diff --name-only)"
+          if [ -z "$CHANGED" ]; then
+            echo "Nothing to fix."
+            exit 0
+          fi
+          UNEXPECTED="$(echo "$CHANGED" | grep -vE '(^|/)package(-lock)?\.json$' || true)"
+          if [ -n "$UNEXPECTED" ]; then
+            echo "Aborting: audit fix touched unexpected files:"
+            echo "$UNEXPECTED"
+            exit 1
+          fi
+          BRANCH="chore/audit-fix-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -am "chore(security): npm audit fix"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore(security): npm audit fix" \
+            --body "Automated non-breaking fixes from npm audit fix. Requires review and green CI before merge." \
+            --base master \
+            --head "$BRANCH"
