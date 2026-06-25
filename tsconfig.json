@@ -3,7 +3,7 @@
 		"module": "ES6",
 		"declaration": true,
 		"removeComments": true,
-		"emitDecoratorMetadata": true,
+		"emitDecoratorMetadata": false,
 		"experimentalDecorators": true,
 		"allowSyntheticDefaultImports": true,
 		"target": "ES6",

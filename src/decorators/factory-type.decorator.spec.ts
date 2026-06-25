@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { faker } from "@faker-js/faker";
-import { Factory } from "src/lib";
-import { BUILT_IN_TYPES, FACTORY_TYPE } from "../constants";
+import { FACTORY_TYPE } from "../constants";
 import { FactoryType, FactoryValue } from "../decorators";
+import { Factory } from "../lib";
 
 describe("FactoryRelationField", () => {
 	it("should correctly store metadata in FACTORY_RELATION", () => {
