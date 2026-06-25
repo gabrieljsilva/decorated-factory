@@ -1,5 +1,11 @@
 # decorated-factory
 
+## 2.0.2
+
+### Patch Changes
+
+- dc50b34: Keep `package.json` formatted by Biome after `changeset version` runs, so the release commit does not break the lint step in CI.
+
 ## 2.0.1
 
 ### Patch Changes
