@@ -5,9 +5,7 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"keywords": [
 		"factory",
 		"decorators",
@@ -40,7 +38,7 @@
 		"test:coverage": "vitest --coverage --run",
 		"prebuild": "rimraf -g dist",
 		"build": "rollup -c",
-		"version": "changeset version",
+		"version": "changeset version && biome format --write package.json",
 		"release": "npm run build && changeset publish",
 		"prelocal-pack": "rimraf -g decorated-factory-*.tgz",
 		"local-pack": "npm pack"
