@@ -5,9 +5,7 @@
 	"main": "dist/index.cjs.js",
 	"module": "dist/index.esm.js",
 	"license": "MIT",
-	"files": [
-		"dist"
-	],
+	"files": ["dist"],
 	"keywords": [
 		"factory",
 		"decorators",
@@ -33,16 +31,21 @@
 		"url": "https://github.com/gabrieljsilva/decorated-factory"
 	},
 	"scripts": {
+		"lint": "biome check .",
+		"typecheck": "tsc --noEmit",
 		"test": "vitest --run",
 		"pretest:coverage": "rimraf -g coverage",
 		"test:coverage": "vitest --coverage --run",
 		"prebuild": "rimraf -g dist",
 		"build": "rollup -c",
+		"version": "changeset version",
+		"release": "npm run build && changeset publish",
 		"prelocal-pack": "rimraf -g decorated-factory-*.tgz",
 		"local-pack": "npm pack"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.8.3",
+		"@changesets/cli": "^2.27.7",
 		"@faker-js/faker": "^8.4.1",
 		"@rollup/plugin-commonjs": "^26.0.1",
 		"@rollup/plugin-node-resolve": "^15.2.3",

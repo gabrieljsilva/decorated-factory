@@ -10,21 +10,21 @@ export default {
 			format: "cjs",
 			sourcemap: false,
 			globals: {
-				'reflect-metadata': 'Reflect',
-				'@faker-js/faker': 'faker'
-			}
+				"reflect-metadata": "Reflect",
+				"@faker-js/faker": "faker",
+			},
 		},
 		{
 			file: "dist/index.esm.js",
 			format: "es",
 			sourcemap: false,
 			globals: {
-				'reflect-metadata': 'Reflect',
-				'@faker-js/faker': 'faker'
-			}
+				"reflect-metadata": "Reflect",
+				"@faker-js/faker": "faker",
+			},
 		},
 	],
-	external: ['reflect-metadata', '@faker-js/faker'],
+	external: ["reflect-metadata", "@faker-js/faker"],
 	plugins: [
 		resolve(),
 		commonjs(),
