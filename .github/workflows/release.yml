@@ -37,7 +37,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Version or publish
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: npm run version
           publish: npm run release
